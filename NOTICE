@@ -1,0 +1,95 @@
+NOTICE
+======
+
+mllm-repro — private internal reproducibility bundle for the MLLM co-GRPO-DP
+(co-learning) experiments. This is a PRIVATE, INTERNAL repository. It is not
+distributed outside the lab and is not an open-source release, so no OSS LICENSE
+file is required. This NOTICE is provided for attribution and provenance only, so
+that reviewers can see what third-party code was bundled or derived from, and what
+is fetched by the user at runtime rather than redistributed here.
+
+
+1. BUNDLED / DERIVED SOURCE CODE
+--------------------------------
+
+* TRL (DrStranded fork) — Apache License 2.0
+  Upstream: https://github.com/huggingface/trl  (base project, Apache-2.0)
+  Fork:     DrStranded/trl  (the pinned training dependency; installed via
+            `pip install git+...` and partially vendored under `trainers/`).
+  The `trainers/` training code and the co-GRPO-DP trainer are based on and
+  derived from this fork. Copyright of the original and fork remains with the
+  respective authors under Apache-2.0.
+
+* HuggingFace Transformers — Apache License 2.0
+  Upstream: https://github.com/huggingface/transformers
+  Used as a pinned dependency (transformers 4.57.0). A small number of inline
+  model patches (InternVL / Gemma load-time fixes in the single-model training
+  path) are derived from Transformers modeling code and remain under Apache-2.0.
+
+* Dockerfile / container build pattern — derived from EasyR1 and veRL, both
+  Apache License 2.0
+  Upstream: https://github.com/hiyouga/EasyR1  and  https://github.com/volcengine/verl
+  The container structure (single-Dockerfile template with the base/app split
+  used for scaling) follows these projects' patterns; no substantial source is
+  copied verbatim, but the design is derivative and is acknowledged here.
+
+Each of the above is licensed under Apache-2.0; their respective copyright and
+license notices apply to the corresponding portions of this bundle.
+
+
+2. MODELS — PULLED BY THE USER AT RUNTIME (NOT REDISTRIBUTED HERE)
+-----------------------------------------------------------------
+
+No model weights are included in this repository. The following are downloaded by
+the user at runtime (e.g. via `setup/prefetch_models.sh`) from their original
+sources, subject to each model's own license:
+
+* Qwen2.5-VL-7B-Instruct ......... Apache License 2.0        (Qwen / Alibaba)
+* Qwen2.5-VL-3B-Instruct ......... Apache License 2.0        (Qwen / Alibaba)
+* InternVL3_5-8B-HF .............. Apache License 2.0        (OpenGVLab)
+* InternVL3_5-2B-HF .............. Apache License 2.0        (OpenGVLab)
+* gemma-3-12b-it ................. Gemma Terms of Use        (Google) — GATED
+
+  The Gemma models are governed by the Gemma license
+  (https://ai.google.dev/gemma/terms), which is NOT an OSI open-source license
+  and restricts redistribution of the model and of derivative weights/outputs.
+  Access is gated: the user must accept the license and authenticate with their
+  own HuggingFace token (never commit a live token; use ${HF_TOKEN:?set HF_TOKEN}
+  or a local .env). Anyone who publishes checkpoints derived from Gemma must carry
+  the Gemma license terms with them.
+
+
+3. DATASETS & BENCHMARKS — PULLED BY THE USER AT RUNTIME (NOT REDISTRIBUTED HERE)
+--------------------------------------------------------------------------------
+
+No training datasets and (with one exception, noted below) no benchmark data are
+redistributed in this repository. They are fetched by the user at runtime (e.g.
+via `setup/prepare_data.sh` and `eval/prepare_benchmarks.py`):
+
+Training datasets:
+* mmr1 ........... no license declared on HuggingFace (null). Fetched at runtime.
+* open_r1 ........ no license declared on HuggingFace (null). Fetched at runtime.
+  Because no license is declared upstream, use is at the user's discretion under
+  the source's terms; nothing from these datasets is redistributed here.
+
+Evaluation benchmarks (fetched at runtime by eval/prepare_benchmarks.py):
+* MathVision  (HF MathLLMs/MathVision)
+* MathVerse   (HF AI4Math/MathVerse, testmini)
+* We-Math     (HF We-Math/We-Math)
+* MathVista   — Creative Commons Attribution-ShareAlike (CC BY-SA).
+  A single-file subset (data/mathvista/testmini.jsonl, plus a 150-item in-loop
+  selection subset) is the ONLY benchmark data bundled in this repo, included for
+  offline checkpoint selection. Under CC BY-SA, attribution to the MathVista
+  authors is required and any redistribution of this subset (which is internal
+  only here) must remain under the same ShareAlike terms.
+
+
+4. SUMMARY
+----------
+
+Bundled/derived code (TRL fork, Transformers-derived patches, EasyR1/veRL-derived
+Dockerfile) is Apache-2.0. Models and training datasets are user-fetched at
+runtime, not redistributed. The only bundled benchmark data is a MathVista subset
+(CC BY-SA). Gemma (models #5/#6/#8/#9) is gated and carries the non-OSS Gemma
+license. This being a private internal repo, no repository-level OSS LICENSE file
+is required; this NOTICE exists solely for attribution and provenance.
