@@ -26,17 +26,17 @@ Models: `Qwen/Qwen2.5-VL-7B-Instruct`, `OpenGVLab/InternVL3_5-8B-HF`,
 
 | # | example script (in `examples/`) | method | model(s) | attn | GPU layout |
 |---|---|---|---|---|---|
-| 1 | `qwen25vl7b_gt.sh`                     | GT       | Qwen2.5-VL-7B                | FA2        | 8 |
-| 2 | `qwen25vl7b_ttrl.sh`                   | TTRL     | Qwen2.5-VL-7B                | FA2        | 8 |
-| 3 | `internvl35_8b_gt.sh`                  | GT       | InternVL3.5-8B               | FA2        | 8 |
-| 4 | `internvl35_8b_ttrl.sh`               | TTRL     | InternVL3.5-8B               | FA2        | 8 |
-| 5 | `gemma3_12b_gt.sh`                     | GT       | Gemma3-12B **(gated)**       | **sdpa**   | 8 |
-| 6 | `gemma3_12b_ttrl.sh`                  | TTRL     | Gemma3-12B **(gated)**       | **sdpa**   | 8 |
-| 7 | `heter_qwen25vl7b_x_internvl35_8b.sh` | co-learn | Qwen-7B × InternVL-8B        | FA2 × FA2  | 4+4 |
-| 8 | `heter_qwen25vl7b_x_gemma3_12b.sh`    | co-learn | Qwen-7B × Gemma-12B **(gated)** | FA2 × sdpa | 4+4 |
-| 9 | `heter_internvl35_8b_x_gemma3_12b.sh` | co-learn | InternVL-8B × Gemma-12B **(gated)** | FA2 × sdpa | 4+4 |
+| 1 | `openr1_qwen25vl7b_gt.sh`                     | GT       | Qwen2.5-VL-7B                | FA2        | 8 |
+| 2 | `openr1_qwen25vl7b_ttrl.sh`                   | TTRL     | Qwen2.5-VL-7B                | FA2        | 8 |
+| 3 | `openr1_internvl35_8b_gt.sh`                  | GT       | InternVL3.5-8B               | FA2        | 8 |
+| 4 | `openr1_internvl35_8b_ttrl.sh`               | TTRL     | InternVL3.5-8B               | FA2        | 8 |
+| 5 | `openr1_gemma3_12b_gt.sh`                     | GT       | Gemma3-12B **(gated)**       | **sdpa**   | 8 |
+| 6 | `openr1_gemma3_12b_ttrl.sh`                  | TTRL     | Gemma3-12B **(gated)**       | **sdpa**   | 8 |
+| 7 | `phase4_heter_qwen25vl7b_x_internvl35_8b_openr1.sh` | co-learn | Qwen-7B × InternVL-8B        | FA2 × FA2  | 4+4 |
+| 8 | `phase4_heter_qwen25vl7b_x_gemma3_12b_openr1.sh`    | co-learn | Qwen-7B × Gemma-12B **(gated)** | FA2 × sdpa | 4+4 |
+| 9 | `phase4_heter_internvl35_8b_x_gemma3_12b_openr1.sh` | co-learn | InternVL-8B × Gemma-12B **(gated)** | FA2 × sdpa | 4+4 |
 
-> Exact filenames may differ slightly — run `ls examples/` and match on method+model.
+> These are the exact filenames in `examples/`; mmr1 reuses the same scripts via `MLLM_PRE_DIR` (§3 step D).
 > **#5, #6, #8, #9 use Gemma → they need an accepted license + `HF_TOKEN` (§3 step B).**
 
 **Both datasets.** The recipe is dataset-agnostic; each experiment can be run on either
@@ -47,7 +47,7 @@ training set:
 
 Selection is by **which preprocessed dir the launcher loads**, via `MLLM_PRE_DIR`
 (`openr1_8k` vs `mmr1_8k`) — see §3 step D and the mmr1 example at the end of §3.
-Grader口径 differs by dataset: mmr1 → `GRADE_MCQ_MAP=1`, open_r1 → `GRADE_MCQ_MAP=0` (§7).
+The grader (`eval/grade.py`) maps MCQ letter↔value automatically from the question's options — one rule-based grader for both datasets, no dataset-specific flag.
 
 Do **not** hand-tune hyperparameters. The launchers hard-code the frozen recipe (kept
 identical across GT/TTRL/co-learn for a fair comparison): `lr=1e-6`, `num_generations=8`,
