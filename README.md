@@ -46,7 +46,7 @@ training set:
 - `mmr1` = the MMR1 math set (source id pinned in `setup/prepare_data.sh`)
 
 Selection is by **which preprocessed dir the launcher loads**, via `MLLM_PRE_DIR`
-(`open_r1_8k` vs `mmr1_8k`) — see §3 step D and the mmr1 example at the end of §3.
+(`openr1_8k` vs `mmr1_8k`) — see §3 step D and the mmr1 example at the end of §3.
 Grader口径 differs by dataset: mmr1 → `GRADE_MCQ_MAP=1`, open_r1 → `GRADE_MCQ_MAP=0` (§7).
 
 Do **not** hand-tune hyperparameters. The launchers hard-code the frozen recipe (kept
@@ -91,8 +91,8 @@ Do steps A→H. A/B are one-time setup; F/G/H repeat per experiment.
 
 ```bash
 # Build from the pinned Dockerfile (frozen stack + toolchain for cpu_adam JIT):
-docker build -f docker/Dockerfile -t mllm-repro:th2.9-cu128-vllm0.11.2 .
-#   (if a sibling placed the Dockerfile at repo root instead, use -f Dockerfile)
+docker build -t mllm-repro:th2.9-cu128-vllm0.11.2 .
+#   (Dockerfile + docker-compose.yml are at the repo root; build context = the repo root)
 
 # — or pull from the private registry (internal GHCR; ask the repo owner for the ref):
 # docker pull <internal-registry>/mllm-repro:th2.9-cu128-vllm0.11.2
@@ -153,7 +153,7 @@ bash setup/prepare_data.sh          # preprocesses BOTH train sets + fetches eva
 This does two things:
 
 1. **Training sets** → preprocesses open_r1 and mmr1 into
-   `$MLLM_DATA_ROOT/mllm_pre/{open_r1_8k,mmr1_8k}` (via `tools/preprocess_mllm_dataset.py`).
+   `$PRE_ROOT/{openr1_8k,mmr1_8k}` (via `tools/preprocess_mllm_dataset.py`).
    The launchers read these through `MLLM_PRE_DIR`.
 2. **Eval benchmarks** → `eval/prepare_benchmarks.py` fetches MathVision
    (`MathLLMs/MathVision`, 3040), MathVerse (`AI4Math/MathVerse` testmini, 3940), and
@@ -166,9 +166,9 @@ Set the local roots once (these override the launchers' baked-in NAS defaults �
 NAS paths are never reachable here):
 
 ```bash
-export MLLM_DATA_ROOT=/data                         # any writable local path
-export OUT_ROOT=$MLLM_DATA_ROOT/mllm_eval           # eval benchmark root (used by run_eval_all.sh)
-export MLLM_PRE_DIR=$MLLM_DATA_ROOT/mllm_pre/open_r1_8k     # default training set
+export PRE_ROOT=/data                         # any writable local path
+export OUT_ROOT=$PRE_ROOT/mllm_eval           # eval benchmark root (used by run_eval_all.sh)
+export MLLM_PRE_DIR=$PRE_ROOT/openr1_8k     # default training set
 export MLLM_EVAL_PATH=$PWD/data/mathvista/testmini_150.jsonl # in-loop val (bundled)
 export MLLM_EVAL_IMAGE_DIR=$PWD/data/mathvista
 ```
@@ -193,7 +193,7 @@ init-fix, and transformers 4.57.x — those four are the load-bearing Gemma fixe
 ### F. Run a full experiment
 
 ```bash
-bash examples/<exp>.sh              # e.g. examples/qwen25vl7b_gt.sh
+bash examples/<exp>.sh              # e.g. examples/openr1_qwen25vl7b_gt.sh
 ```
 
 One command, self-contained. A full run is ~1 epoch (≈1000 steps at EB=64). Checkpoints
@@ -203,7 +203,7 @@ The in-loop MathVista-150 eval runs every `EVAL_STEPS` and selects the best chec
 To run **mmr1** instead of the default open_r1, point `MLLM_PRE_DIR` at the mmr1 dir:
 
 ```bash
-MLLM_PRE_DIR=$MLLM_DATA_ROOT/mllm_pre/mmr1_8k bash examples/qwen25vl7b_gt.sh
+MLLM_PRE_DIR=$PRE_ROOT/mmr1_8k bash examples/openr1_qwen25vl7b_gt.sh
 ```
 
 ### G. Final evaluation (post-training, 4 benchmarks)
@@ -218,11 +218,9 @@ bash eval/run_eval_all.sh \
   --prompt answer                    # trained ckpt → "answer"; untrained base → "boxed"
 ```
 
-Greedy (T=0), `max_tokens=2048`, rule-based grader (`eval/grade.py` — `<answer>` →
-`\boxed` → MCQ-letter fallback, **no LLM judge**). It writes one CSV row
-(`tag,model,mathvision,mathverse,mathvista,wemath,avg`). **We-Math needs
-`--max_num_seqs 64`** or it KV-thrashes into a 4h timeout (§8). For mmr1 checkpoints,
-`export GRADE_MCQ_MAP=1` first; for open_r1, `=0` (§7).
+Greedy (T=0), `--max_tokens` (default 4096), rule-based grader (`eval/grade.py` — `<answer>` →
+`\boxed` → MCQ letter↔value from the question's options, **no LLM judge**). It writes one CSV row
+(`tag,model,mathvision,mathverse,mathvista,wemath,avg`). If **We-Math** stalls (long outputs oversubscribe the vLLM KV cache), lower `--limit` or run `eval/eval_mllm.py` directly with a smaller `--max_tokens` — see §8. The grader maps MCQ letter↔value automatically (grade.py), so no `GRADE_MCQ_MAP` flag is needed.
 
 ### H. Compare to expected results
 
@@ -287,14 +285,14 @@ If your **compute** nodes have no external network (classic HPC), do the fetch o
 ```bash
 # On a login node (has network):
 bash setup/prefetch_models.sh          # populates HF_HUB_CACHE
-bash setup/prepare_data.sh             # populates $OUT_ROOT + $MLLM_DATA_ROOT/mllm_pre/*
+bash setup/prepare_data.sh             # populates $OUT_ROOT + $PRE_ROOT/*
 
 # On the compute node (no network) — force offline so nothing tries to reach the hub:
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 ```
 
-Make sure the same `HF_HOME`/`HF_HUB_CACHE`/`HF_DATASETS_CACHE`/`OUT_ROOT`/`MLLM_DATA_ROOT`
+Make sure the same `HF_HOME`/`HF_HUB_CACHE`/`HF_DATASETS_CACHE`/`OUT_ROOT`/`PRE_ROOT`
 paths are visible (shared filesystem or bind mount) from both nodes. Known cache traps to
 avoid on such setups: unset any inherited `TRANSFORMERS_CACHE` (it silently redirects
 lookups to an empty dir), and set `PYTHONNOUSERSITE=1` (a stray `~/.local` torch stub can
@@ -315,7 +313,7 @@ apptainer build mllm-repro.sif docker://<internal-registry>/mllm-repro:th2.9-cu1
 apptainer exec --nv --cleanenv \
   --env HF_TOKEN="${HF_TOKEN:?set HF_TOKEN}" \
   --env HF_HOME=/cache/hf --env HF_HUB_CACHE=/cache/hf/hub --env HF_DATASETS_CACHE=/cache/hf/datasets \
-  --env OUT_ROOT=/data/mllm_eval --env MLLM_DATA_ROOT=/data --env MLLM_ENV_READY=1 \
+  --env OUT_ROOT=/data/mllm_eval --env PRE_ROOT=/data --env MLLM_ENV_READY=1 \
   -B /host/hf_cache:/cache/hf \
   -B /host/mllm_data:/data \
   -B "$PWD":/workspace \
@@ -339,7 +337,7 @@ Notes:
 ## 8. Troubleshooting
 
 - **OOM (usually a Gemma-12B pair, #8/#9)** → lower the vLLM memory fraction:
-  `VLLM_MEM=0.40 bash examples/heter_qwen25vl7b_x_gemma3_12b.sh`. This gives the backward
+  `VLLM_MEM=0.40 bash examples/phase4_heter_qwen25vl7b_x_gemma3_12b_openr1.sh`. This gives the backward
   pass more headroom; leave everything else alone. Gemma pairs are the tightest and VRAM
   climbs as completions lengthen — watch GPU4-7. If still tight, that is the only knob to
   turn; do not change `bs`/`ga` without re-deriving `GA` to keep EB=64 (otherwise the
@@ -351,15 +349,13 @@ Notes:
 - **`401`/gated-repo error on Gemma** → the license is not accepted for your token, or
   `HF_TOKEN` is unset/expired. Redo §3 step B (accept license on HF, export a read-scope
   token, `huggingface-cli whoami`). Only #5/#6/#8/#9 need it.
-- **We-Math eval hangs / times out at ~4h** → add `--max_num_seqs 64` to the eval. We-Math
+- **We-Math eval hangs / times out at ~4h** → lower `--limit`/`--max_tokens` (this repo's `eval/eval_mllm.py` has no `--max_num_seqs` flag; for the proper fix add `max_num_seqs=64` to its `LLM(...)`). We-Math
   has long outputs that oversubscribe the vLLM KV cache → preempt/recompute → throughput
-  collapses (~226→6 it/s). `--max_num_seqs 64` bounds the running batch; it is
+  collapses (~226→6 it/s). A bounded running batch is
   metric-neutral under greedy decoding. (MathVision/MathVerse finish fine because their
   outputs are short.)
 - **A collapsed TTRL/self checkpoint makes an eval bench return NA / never finish** → it is
-  emitting runaway long text; cap with `--max_tokens 1024` (the real answer is early). Set
-  `GRADE_MCQ_MAP=1` for mmr1 checkpoints and `=0` for open_r1 — mixing them causes
-  widespread false negatives on the multiple-choice benches (We-Math / MathVerse).
+  emitting runaway long text; call `eval/eval_mllm.py` directly with `--max_tokens 1024` (the real answer is early; `run_eval_all.sh` does not forward this flag). The grader maps MCQ letter↔value automatically (`grade.py`), so no `GRADE_MCQ_MAP` is needed.
 - **`inhomogeneous shape` / Gemma processor crash** → transformers too old for the Gemma3
   multimodal processor. The frozen stack is `transformers==4.57.0` (in the image); if a
   Gemma smoke run hits this, verify the container's transformers version rather than
