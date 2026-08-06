@@ -1,10 +1,15 @@
-# EXPECTED_RESULTS — acceptance criterion for the mllm big-tier repro
+# EXPECTED_RESULTS — acceptance criterion for the mllm repro (small + big tier)
 
 This file is the **acceptance target** for a reproduction run. After you train one of
-the 9 big-tier (7B/8B/12B) experiments and evaluate it with `eval/run_eval_all.sh`,
-compare your 4-benchmark row against the numbers here. A run "reproduces" if it lands
-inside the **tolerance band** (see the last section) *and* preserves the qualitative
-ordering (`trained > base`, `co-learn ≈ GT`, both `≥ TTRL` within noise).
+the 15 experiments (9 big-tier 7B/8B/12B + 6 small-tier 2B/3B/4B) and evaluate it with
+`eval/run_eval_all.sh`, compare your 4-benchmark row against the numbers here. A run
+"reproduces" if it lands inside the **tolerance band** (see the last section) *and*
+preserves the qualitative ordering (`trained > base`, `co-learn ≈ GT`, both `≥ TTRL`
+within noise).
+
+> **Small-tier reference numbers** live in the shipped CSVs (see the honesty note below) —
+> those rows are exactly the small tier, so #10–#15 have real targets to hit. The big tier
+> is the sparser half.
 
 > **Read the honesty note first.** The three shipped result CSVs
 > (`RESULTS_bestval_4bench.csv`, `RESULTS_endpoint_4bench.csv`, `RESULTS_ALL_mllm.csv`)

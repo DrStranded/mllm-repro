@@ -1,4 +1,4 @@
-# mllm-repro — big-tier MLLM RL reproduction runbook
+# mllm-repro — MLLM RL reproduction runbook (small + big tier)
 
 Private internal reproducibility repo. **Audience: a Claude Code agent that reads and
 executes this file top-to-bottom.** Every step is an explicit command. Paths are
@@ -11,9 +11,10 @@ Do not improvise stack versions or hyperparameters — they are frozen and load-
 
 ## 1. What this reproduces
 
-Nine "big-tier" (7B/8B/12B) multimodal RL runs — the §5.6 scale row of the paper. Same
-recipe as the small-model main table, only the models are larger. Three training methods
-× three models:
+**Fifteen** multimodal RL runs across **two model tiers** — the big tier is the §5.6 scale
+row of the paper, the small tier is the §5.4 main table. Three training methods × three
+models per tier, and the same recipe applies to **both training sets** (open_r1 / mmr1,
+selected by `MLLM_PRE_DIR` — §3 step D). Three training methods:
 
 - **GT** — stock GRPO against the dataset's ground-truth answer.
 - **TTRL** — self-label majority-vote reward (no ground truth).
@@ -21,8 +22,12 @@ recipe as the small-model main table, only the models are larger. Three training
   pseudo-labels over a file rendezvous (heterogeneous cross-supervision). A "co-learn"
   run is therefore a **model pair**, run 4+4 on one node.
 
-Models: `Qwen/Qwen2.5-VL-7B-Instruct`, `OpenGVLab/InternVL3_5-8B-HF`,
+**Big tier** (§5.6): `Qwen/Qwen2.5-VL-7B-Instruct`, `OpenGVLab/InternVL3_5-8B-HF`,
 `google/gemma-3-12b-it` (Gemma has no 8B; 12B is the nearest same-tier size).
+**Small tier** (§5.4): `Qwen/Qwen2.5-VL-3B-Instruct`, `OpenGVLab/InternVL3_5-2B-HF`,
+`google/gemma-3-4b-it`.
+
+### Big tier — 7B / 8B / 12B (§5.6)
 
 | # | example script (in `examples/`) | method | model(s) | attn | GPU layout |
 |---|---|---|---|---|---|
@@ -36,8 +41,34 @@ Models: `Qwen/Qwen2.5-VL-7B-Instruct`, `OpenGVLab/InternVL3_5-8B-HF`,
 | 8 | `phase4_heter_qwen25vl7b_x_gemma3_12b_openr1.sh`    | co-learn | Qwen-7B × Gemma-12B **(gated)** | FA2 × sdpa | 4+4 |
 | 9 | `phase4_heter_internvl35_8b_x_gemma3_12b_openr1.sh` | co-learn | InternVL-8B × Gemma-12B **(gated)** | FA2 × sdpa | 4+4 |
 
-> These are the exact filenames in `examples/`; mmr1 reuses the same scripts via `MLLM_PRE_DIR` (§3 step D).
-> **#5, #6, #8, #9 use Gemma → they need an accepted license + `HF_TOKEN` (§3 step B).**
+### Small tier — 2B / 3B / 4B (§5.4)
+
+| # | example script (in `examples/`) | method | model | attn | GPU layout |
+|---|---|---|---|---|---|
+| 10 | `openr1_qwen25vl3b_gt.sh`      | GT   | Qwen2.5-VL-3B  | FA2      | 8 |
+| 11 | `openr1_qwen25vl3b_ttrl.sh`    | TTRL | Qwen2.5-VL-3B  | FA2      | 8 |
+| 12 | `openr1_internvl35_2b_gt.sh`   | GT   | InternVL3.5-2B | FA2      | 8 |
+| 13 | `openr1_internvl35_2b_ttrl.sh` | TTRL | InternVL3.5-2B | FA2      | 8 |
+| 14 | `openr1_gemma3_4b_gt.sh`       | GT   | Gemma3-4B **(gated)** | **sdpa** | 8 |
+| 15 | `openr1_gemma3_4b_ttrl.sh`     | TTRL | Gemma3-4B **(gated)** | **sdpa** | 8 |
+
+> These are the exact filenames in `examples/`. **The `openr1_` prefix is historical — every
+> script runs on either training set**; the set is chosen by `MLLM_PRE_DIR` (`openr1_8k` vs
+> `mmr1_8k`), not by the filename (§3 step D).
+> **#5, #6, #8, #9, #14, #15 use Gemma → they need an accepted license + `HF_TOKEN` (§3 step B).**
+
+**Small tier differs from big tier in three frozen ways** (do not "harmonise" them — each
+tier's settings are the ones that produced the paper's numbers):
+
+| | big tier (7B/8B/12B) | small tier (2B/3B/4B) |
+|---|---|---|
+| accelerate config | `accelerate_zero3_offload.yaml` (optimizer CPU offload) | `accelerate_zero3.yaml` (**no offload** — small models fit) |
+| batch shape | `bs=2 × ga=4 × 8gpu` (single) / `bs=2 × ga=8 × 4gpu` (co-learn) | `bs=1 × ga=8 × 8gpu` |
+| `vllm_gpu_memory_utilization` | 0.55 (single) / 0.30–0.45 (co-learn) | 0.45 |
+
+**Effective batch is EB=64 in every one of the fifteen runs** — that is the invariant that
+makes GT / TTRL / co-learn comparable, and it is preserved across both tiers. Host-RAM
+requirements in §2 apply to the big tier only; the small tier runs without offload.
 
 **Both datasets.** The recipe is dataset-agnostic; each experiment can be run on either
 training set:
@@ -52,8 +83,10 @@ The grader (`eval/grade.py`) maps MCQ letter↔value automatically from the ques
 Do **not** hand-tune hyperparameters. The launchers hard-code the frozen recipe (kept
 identical across GT/TTRL/co-learn for a fair comparison): `lr=1e-6`, `num_generations=8`,
 `max_completion_length=1024`, `temperature=1.0`, `beta=0`, `loss_type=bnpo`,
-`scale_rewards=group`, 1 epoch, `seed=42`, effective batch **EB=64**
-(single-model `bs=2 × ga=4 × 8gpu`; co-learn `bs=2 × ga=8 × 4gpu`), and
+`scale_rewards=group`, **1 epoch** (`num_train_epochs=1` with `max_steps=-1` — never pin
+`--max_steps`, that silently changes the budget), `seed=42`, effective batch **EB=64**
+(big-tier single-model `bs=2 × ga=4 × 8gpu`; big-tier co-learn `bs=2 × ga=8 × 4gpu`;
+small-tier single-model `bs=1 × ga=8 × 8gpu`), and
 `--vllm_importance_sampling_mode token_truncate` (mandatory — without it importance
 weights collapse to ~1e-5). Model-specific, also baked in and **not** to be changed:
 Gemma → `--attn_implementation sdpa` (FA2 crashes it in this config) + EOS/ZeRO-3 init
@@ -65,7 +98,8 @@ fix; InternVL → the `-HF` variant + FA2. Only the env knobs in §8 are meant t
 
 - **8×80GB GPUs on a single node.** Non-negotiable. Single-model runs use all 8; co-learn
   splits 4+4 (model A = GPU0-3, model B = GPU4-7) and exchanges pseudo-labels over a
-  file rendezvous. 4×80GB is **not** enough for any of the nine.
+  file rendezvous. 4×80GB is **not** enough for any of the big-tier nine; the small
+  tier (#10-#15) also assumes the same 8-GPU node but is far less memory-hungry.
 - **Large host RAM.** All runs use full-parameter ZeRO-3 with **optimizer CPU offload**
   (`trainers/accelerate_zero3_offload.yaml`). The fp32 Adam m/v/master states live in
   host RAM; for the 12B models that is on the order of ~150GB resident. **Provision
