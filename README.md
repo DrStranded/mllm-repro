@@ -222,7 +222,9 @@ MAX_STEPS=1 MAX_SAMPLES=64 bash examples/<exp>.sh
 ```
 
 For a Gemma pair, confirm the smoke log shows `sdpa`, the Gemma EOS id, the ZeRO-3
-init-fix, and transformers 4.57.x — those four are the load-bearing Gemma fixes.
+init-fix, transformers 4.57.x, and no `inhomogeneous shape` — those five are the
+load-bearing Gemma fixes (the fifth, the processor padding wrapper, was added 2026-08-06;
+see §8 and the comment in `trainers/train_mllm_single.py`).
 
 ### F. Run a full experiment
 
@@ -266,6 +268,50 @@ Match your per-benchmark and `avg` numbers against `EXPECTED_RESULTS.md` within 
 tolerance band. The target is "reproduces within tolerance", **not** bit-identical numbers
 — RL has real run-to-run variance and the reference numbers were produced on different
 (pod) hardware; the tolerance band absorbs that.
+
+---
+
+## 3b. Running on fewer than 8 GPUs (and how to read the result)
+
+The recipes assume 8 GPUs. You can map them onto fewer, but two quantities must be
+preserved or the run is no longer comparable to the reference numbers:
+
+- **EB = `bs × GA × num_processes` must stay 64.**
+- **`num_generations` must stay 8**, and TRL requires it to divide `num_processes × bs`.
+
+Those two together are more constraining than they look. Naively holding EB by inflating GA
+(e.g. 2 GPUs, `bs=1 × GA=32`) forces `num_generations` down to 2, which **silently changes the
+algorithm** — GRPO computes its advantage over the group of samples per prompt, so N=2 and N=8
+are different objectives, and their completion-length and clip statistics are not comparable.
+Raise `bs` instead:
+
+| GPUs | bs | GA | EB | `num_proc × bs` | `num_generations` |
+|------|----|----|----|-----------------|-------------------|
+| 8 (reference) | 1 | 8 | 64 | 8 | 8 ✓ |
+| 4 | 2 | 8 | 64 | 8 | 8 ✓ |
+| 2 | 4 | 8 | 64 | 8 | 8 ✓ |
+| 2 (**wrong**) | 1 | 32 | 64 | 2 | forced to 2 ✗ |
+
+`NUM_PROC` is env-overridable in `examples/smoke.sh` and in the six small-tier launchers
+(it used to be hardcoded to 8).
+
+**Reading `completions/clipped_ratio`.** It peaks on the first step and then oscillates widely
+before settling; judging a run by any single step will make a healthy run look broken. A
+small-tier Gemma-3-4B GT run on mmr1 measured here went
+`36 → 16 → 25 → 22 → 3 → 36 → 14 → 27 %` over its first eight steps (mean ≈22%), consistent
+with the reference trajectory (first step 30–34%, whole-run mean 8–17%). With EB=64 each step
+sees only 64 completions, so step-to-step swings of ±20 points are expected — read the running
+mean, not individual steps. Two traps when measuring this:
+
+1. **Only `num_generations=8` numbers are comparable.** A run with `num_generations=2` produced
+   ~42% at step 1 and an *upward* trend — an artifact of the reduced group size, not a real
+   regression.
+2. **Confirm the previous run's processes are actually dead before starting the next one.**
+   `pkill` on the launcher does not necessarily reap the trainer; check
+   `nvidia-smi --query-compute-apps=pid` (`--query-gpu=memory.used` intermittently reports 0 on
+   some driver versions and will lie to you). Overlapping runs interleave into the same log and
+   produce nonsense readings — this is what generated the contradictory 42% / 17% / 48% numbers
+   before it was noticed.
 
 ---
 
@@ -390,10 +436,18 @@ Notes:
   outputs are short.)
 - **A collapsed TTRL/self checkpoint makes an eval bench return NA / never finish** → it is
   emitting runaway long text; call `eval/eval_mllm.py` directly with `--max_tokens 1024` (the real answer is early; `run_eval_all.sh` does not forward this flag). The grader maps MCQ letter↔value automatically (`grade.py`), so no `GRADE_MCQ_MAP` is needed.
-- **`inhomogeneous shape` / Gemma processor crash** → transformers too old for the Gemma3
-  multimodal processor. The frozen stack is `transformers==4.57.0` (in the image); if a
-  Gemma smoke run hits this, verify the container's transformers version rather than
-  patching around it.
+- **`inhomogeneous shape` / Gemma processor crash** → **not** a transformers-version problem
+  (an earlier version of this entry said it was; it is wrong — the pinned `transformers==4.57.0`
+  hits it too). The Gemma-3 processor builds `token_type_ids` with
+  `np.array(text_inputs["input_ids"])`, which raises as soon as one batched
+  `apply_chat_template` call sees prompts of **differing length**. TRL only passes
+  `padding=True` when its own version guard fires (transformers 5.3.0), so on 4.57.x the call
+  goes through unpadded. Qwen2.5-VL / InternVL never take that numpy path, which is why only
+  Gemma crashes. `trainers/train_mllm_single.py` now wraps `Gemma3Processor.apply_chat_template`
+  to pad on the way in and unpad on the way out (see the comment there). The number of prompts
+  per tokenize call is `bs × num_processes × GA ÷ num_generations`, so **the larger your GA,
+  the more likely you hit this** — it was first seen at GA=32 while mapping the 8-GPU recipe
+  onto 2 GPUs, and the crash message's `(32,)` is exactly that prompt count.
 - **NCCL/dataloader hang at startup** → shared memory too small. Ensure `--ipc=host
   --shm-size=32g` (Docker) or a large host `/dev/shm` (apptainer). See §2.
 - **Launcher tries to `source` a `./PATH` NAS path or writes to a NAS default** → the

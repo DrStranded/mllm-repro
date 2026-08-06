@@ -30,14 +30,14 @@ export MLLM_PRE_DIR="${MLLM_PRE_DIR:?set MLLM_PRE_DIR = preprocessed open_r1_8k 
 export MLLM_EVAL_PATH="${MLLM_EVAL_PATH:?set MLLM_EVAL_PATH = mathvista jsonl (a ~16-line subset is ideal for the smoke)}"
 export MLLM_EVAL_IMAGE_DIR="${MLLM_EVAL_IMAGE_DIR:?set MLLM_EVAL_IMAGE_DIR = mathvista image root (data/mathvista)}"
 DATASET="lmms-lab/multimodal-open-r1-8k-verified"
-MODEL="Qwen/Qwen2.5-VL-7B-Instruct"
+MODEL="${MODEL:-Qwen/Qwen2.5-VL-7B-Instruct}"
 TS="$(date +%Y%m%d_%H%M%S)"; RUN="smoke_qwen25vl7b_gt_${TS}"
 BASE_OUT="work_dirs/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
 # Reduced-for-speed knobs (override if needed). max_steps=2, tiny group + short completions.
 export MAX_STEPS="${MAX_STEPS:-2}"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launch \
     --config_file trainers/accelerate_zero3_offload.yaml \
-    --num_processes 8 --main_process_port 19468 --gradient_accumulation_steps ${GA:-1} \
+    --num_processes ${NUM_PROC:-8} --main_process_port 19468 --gradient_accumulation_steps ${GA:-1} \
     trainers/train_mllm_single.py \
     --model_name_or_path "$MODEL" --train_dataset "$DATASET" \
     --output_dir "$BASE_OUT" --run_config "$RUN" \

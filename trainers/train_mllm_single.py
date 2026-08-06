@@ -52,6 +52,63 @@ def _safe_init_weights(self, module):
 _PreTrainedModel._init_weights = _safe_init_weights
 
 
+# Gemma-3 + batched-prompt fix: TRL's `_tokenize_prompts` calls the processor's
+# `apply_chat_template` on the whole batch at once, and only passes `padding=True`
+# when it detects the transformers 5.3.0 processor bug (transformers#44514):
+#
+#     needs_padding_workaround = Version("5.3.0") <= Version(transformers.__version__) < Version("5.4.0")
+#
+# The same class of bug is present in the Gemma-3 processor on the pinned 4.57.x, so
+# that version guard misses it. Gemma3Processor builds `token_type_ids` with
+#     array_ids = np.array(text_inputs["input_ids"])          # processing_gemma3.py
+# which raises
+#     ValueError: setting an array element with a sequence. The requested array has an
+#     inhomogeneous shape after 1 dimensions.
+# the moment the batch contains prompts of differing length. Qwen2.5-VL and InternVL
+# never take that numpy path, which is why only Gemma runs crash (at step 0, before
+# any training happens). Verified directly on google/gemma-3-4b-it: the processor
+# fails with padding=False and succeeds with padding=True.
+#
+# Fix: force `padding=True` for Gemma-3 processors by wrapping apply_chat_template.
+# Padding here is harmless for the caller — TRL unpads via the attention mask right
+# after (`needs_padding_workaround` branch), and for the non-Gemma processors this
+# wrapper is a no-op.
+from transformers.models.gemma3.processing_gemma3 import Gemma3Processor as _Gemma3Processor
+
+_orig_gemma3_apply_chat_template = _Gemma3Processor.apply_chat_template
+
+
+def _gemma3_apply_chat_template_padded(self, *args, **kwargs):
+    if not (kwargs.get("tokenize", True) and kwargs.get("return_dict", False)):
+        return _orig_gemma3_apply_chat_template(self, *args, **kwargs)
+    # Pad so the processor's np.array() over input_ids sees a rectangular batch...
+    kwargs.setdefault("padding", True)
+    out = _orig_gemma3_apply_chat_template(self, *args, **kwargs)
+    # ...then UNPAD before returning. This is essential: TRL only strips padding when
+    # its own `needs_padding_workaround` version check fires (transformers 5.3.0), which
+    # it does not on the pinned 4.57.x. Without unpadding here, TRL would take the
+    # padded ids as the literal prompt, feeding pad tokens into the model — which shows
+    # up as generations that never emit <end_of_turn> and run to max_completion_length
+    # (clipped_ratio 1.0, reward 0). Undoing it here keeps the contract identical to the
+    # unpadded call the caller expects.
+    if "attention_mask" in out:
+        masks = out["attention_mask"]  # keep the ORIGINAL mask: every field is unpadded against it
+        out["input_ids"] = [
+            [tok for tok, m in zip(ids, mask, strict=True) if m]
+            for ids, mask in zip(out["input_ids"], masks, strict=True)
+        ]
+        if "token_type_ids" in out:
+            out["token_type_ids"] = [
+                [t for t, m in zip(tt, mask, strict=True) if m]
+                for tt, mask in zip(out["token_type_ids"], masks, strict=True)
+            ]
+        out["attention_mask"] = [[1] * len(ids) for ids in out["input_ids"]]
+    return out
+
+
+_Gemma3Processor.apply_chat_template = _gemma3_apply_chat_template_padded
+
+
 from trl import (
     GRPOConfig,
     GRPOTrainer,
