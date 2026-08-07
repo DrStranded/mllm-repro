@@ -1,11 +1,18 @@
 # mllm-repro — MLLM RL reproduction runbook (small + big tier)
 
-Private internal reproducibility repo. **Audience: a Claude Code agent that reads and
+Public reproducibility repo. **Audience: a Claude Code agent that reads and
 executes this file top-to-bottom.** Every step is an explicit command. Paths are
 repo-relative unless stated; run everything from the repo root unless told otherwise.
 Do not improvise stack versions or hyperparameters — they are frozen and load-bearing
 (see §4). When a step says "override via env", export the variable *before* the
 `bash examples/...` call so it wins over the launcher's built-in default.
+
+## Quick launch: two InternVL3.5-2B MMR1 runs on one 8-GPU node
+
+Run GT on GPUs 0–3 and TTRL on GPUs 4–7 in parallel, with the frozen stack,
+MathVista in-loop evaluation, `BS=2 GA=8`, and the required `setsid` launch pattern:
+
+**[Open the complete 8-GPU MMR1 parallel runbook →](RUN_8GPU_MMR1.md)**
 
 ---
 
