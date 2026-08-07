@@ -249,6 +249,28 @@ To run **mmr1** instead of the default open_r1, point `MLLM_PRE_DIR` at the mmr1
 MLLM_PRE_DIR=$PRE_ROOT/mmr1_8k bash examples/openr1_qwen25vl7b_gt.sh
 ```
 
+**Disk: the GT launchers can fill a 1 TB volume.** The small-tier GT scripts deliberately
+leave `save_only_model` unset so a crashed run can resume, and set no `save_total_limit` so
+every checkpoint is kept for the post-hoc sweep in step G. Under ZeRO-3 that writes a full
+fp32 optimizer shard set per checkpoint, and only the newest copy is ever resumable. Measured
+on Qwen2.5-VL-3B: **7 GiB of weights + 42 GiB of optimizer state = 49 GiB per checkpoint**. At
+`save_steps=20` over a 961-step epoch that is 48 checkpoints, i.e. **~2.3 TB** — more than a
+1 TB volume holds, and the run dies partway through with `No space left on device`.
+
+Set `MLLM_PRUNE_OPTIM_STATE=1` to keep every checkpoint's weights but only the newest one's
+optimizer state. After each save it drops `global_step*/`, `optimizer*.pt`, `scheduler.pt`,
+`rng_state*.pth` and `latest` from all older checkpoints (and from `best_model`, which is a
+hardlink copy taken while its source was still newest). Weights, config and `trainer_state.json`
+are untouched, so every checkpoint stays fully evaluatable; only *resuming* from an older
+checkpoint is given up. The 3B run above drops from ~2.3 TB to ~380 GB (48 x 7 GiB of weights, plus one 42 GiB optimizer set).
+
+```bash
+MLLM_PRUNE_OPTIM_STATE=1 bash examples/openr1_qwen25vl3b_gt.sh
+```
+
+The TTRL launchers already pass `--save_only_model true --save_total_limit 3` and do not need
+this.
+
 ### G. Final evaluation (post-training, 4 benchmarks)
 
 Pick the best checkpoint (highest in-loop MathVista-150), then evaluate it greedily on all

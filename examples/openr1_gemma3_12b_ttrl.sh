@@ -28,7 +28,7 @@ BASE_OUT="work_dirs/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
 MAXSTEPS_ARG=""; [ -n "${MAX_STEPS:-}" ] && MAXSTEPS_ARG="--max_steps ${MAX_STEPS}"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launch \
     --config_file trainers/accelerate_zero3_offload.yaml \
-    --num_processes 8 --main_process_port 19487 --gradient_accumulation_steps ${GA:-4} \
+    --num_processes ${NUM_PROC:-8} --main_process_port 19487 --gradient_accumulation_steps ${GA:-4} \
     trainers/train_mllm_single.py \
     --model_name_or_path "$MODEL" --train_dataset "$DATASET" \
     --output_dir "$BASE_OUT" --run_config "$RUN" \

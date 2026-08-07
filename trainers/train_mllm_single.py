@@ -19,6 +19,7 @@ Does NOT share:
 """
 
 import os
+import glob
 import json
 import shutil
 from dataclasses import dataclass, field
@@ -230,6 +231,56 @@ class BestKeeperCallback(TrainerCallback):
             )
 
 
+class OptimStatePrunerCallback(TrainerCallback):
+    """Keep every checkpoint's weights, but only the newest checkpoint's
+    optimizer state. With `save_only_model=false` (what the GT small-tier
+    launchers use, so a crashed run can resume) ZeRO-3 writes a full fp32
+    optimizer shard set per checkpoint: ~12 bytes/param, i.e. ~36 GB per
+    checkpoint for a 3B model. Over a 961-step epoch at save_steps=20 that
+    is ~1.7 TB of state, of which only the newest copy can ever be resumed
+    from. On every save, drop the resume-only files from all older
+    checkpoints; the model weights, config and trainer_state stay untouched
+    so every checkpoint remains fully evaluatable.
+
+    Opt-in via `MLLM_PRUNE_OPTIM_STATE=1` so the repo default is unchanged.
+    """
+
+    def on_save(self, args, state, control, **kw):
+        if not state.is_world_process_zero:
+            return
+        ckpts = sorted(
+            glob.glob(os.path.join(args.output_dir, "checkpoint-*")),
+            key=lambda p: int(p.rsplit("-", 1)[1]),
+        )
+        # best_model is a hardlink copy taken while its source was still the
+        # newest ckpt, so it carries a full optimizer set of its own. It is
+        # only ever used for eval, so prune it too.
+        stale = ckpts[:-1] + [os.path.join(args.output_dir, "best_model")]
+
+        def _reclaimed(path):
+            # best_model is a hardlink copy, so its bytes are still referenced by the
+            # source checkpoint. Only count files whose last link is the one being
+            # removed, else the log overstates the saving by a whole optimizer set.
+            st = os.stat(path)
+            return st.st_size if st.st_nlink == 1 else 0
+
+        freed = 0
+        for ckpt in stale:
+            for pat in ("global_step*", "optimizer*.pt", "scheduler.pt", "rng_state*.pth", "latest"):
+                for path in glob.glob(os.path.join(ckpt, pat)):
+                    if os.path.isdir(path):
+                        for root, _, files in os.walk(path):
+                            freed += sum(_reclaimed(os.path.join(root, f)) for f in files)
+                        shutil.rmtree(path)
+                    else:
+                        freed += _reclaimed(path)
+                        os.remove(path)
+        if freed:
+            print(f"[prune-optim] step {state.global_step}: freed {freed / 2**30:.2f} GiB of "
+                  f"optimizer state; resume state now exists only for {os.path.basename(ckpts[-1])}",
+                  flush=True)
+
+
 if __name__ == "__main__":
     parser = TrlParser((MllmSingleScriptArguments, GRPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
@@ -396,6 +447,8 @@ if __name__ == "__main__":
         trainer = GRPOTrainer(**trainer_kwargs)
 
     trainer.add_callback(BestKeeperCallback())
+    if os.environ.get("MLLM_PRUNE_OPTIM_STATE") == "1":
+        trainer.add_callback(OptimStatePrunerCallback())
 
     trainer.train()
     trainer.save_model(training_args.output_dir)
