@@ -443,6 +443,33 @@ Notes:
 
 ---
 
+## 7b. Two traps confirmed on a fresh rebuild (2026-08-08)
+
+**The image's python is 3.11; three pins in constraints.txt need >=3.12.**
+`ipython==9.12.0` (and its lexers) declare `Requires-Python >=3.12`, and pip
+enforces that even under `--no-deps` — one bad line aborts the whole `-r`
+install, so *nothing* after torch goes in. The freeze was taken on a py3.12
+host; the pytorch/pytorch:2.9.0 image ships 3.11.14. Neither package is
+imported by training. When replaying the constraints on the image, drop the
+offending lines and record the drop; a drop that touches a training-critical
+package (torch/vllm/transformers/trl/deepspeed/...) must abort the build, not
+be papered over.
+
+**Qwen2.5-VL needs `MLLM_VIT_ATTN_FIX=1`.** vLLM 0.11.2's
+`maybe_get_vit_flash_attn_backend` returns two values but sets
+`use_upstream_fa` internally; the caller in `qwen2_5_vl.py` drops it, so the
+vision tower lands on vLLM's bundled FA2 — compiled only for head dims that are
+multiples of 32, and Qwen2.5-VL's ViT is 1280/16 = 80:
+
+    RuntimeError: This flash attention build does not support headdim
+    not being a multiple of 32.
+
+Both trainers carry an env-gated patch that keeps the platform's XFORMERS pick
+instead of promoting to FLASH_ATTN. Export `MLLM_VIT_ATTN_FIX=1` for every
+Qwen2.5-VL run (measured: 0 headdim errors over two full 722-step runs with it;
+immediate crash without). Gemma-3 and InternVL head dims are multiples of 32
+and take the FLASH_ATTN path untouched, fix on or off.
+
 ## 8. Troubleshooting
 
 - **OOM (usually a Gemma-12B pair, #8/#9)** → lower the vLLM memory fraction:

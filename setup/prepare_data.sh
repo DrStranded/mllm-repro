@@ -117,6 +117,13 @@ run_train_stage() {
 # ---------------------------------------------------------------------------
 run_eval_stage() {
   mkdir -p "$OUT_ROOT"
+  # The bundled MathVista dir ships only the jsonl -- the 150 images it points
+  # at are rebuilt (with per-row verification) if absent. Without this the first
+  # in-loop eval dies on images/1.png.
+  if [ ! -f "$MV_DIR/images/1.png" ]; then
+    log ">> materialising MathVista eval images (tools/materialise_mathvista_images.py)"
+    "$PYTHON" "$REPO_ROOT/tools/materialise_mathvista_images.py"
+  fi
   export OUT_ROOT
 
   # MathVista: pre-place $OUT_ROOT/mathvista as a symlink to the bundled dir so
