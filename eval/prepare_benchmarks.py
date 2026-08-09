@@ -95,16 +95,50 @@ def wemath():
 
 
 def mathvista():
-    """Already local in the project's format; just symlink/copy the dir reference."""
+    """Symlink the local copy when present; otherwise build the full testmini
+    (1000 rows + images) from AI4Math/MathVista in the project's row format.
+
+    The repo bundles only the 150-row in-loop subset; the full set used to live
+    on the original cluster's NAS, so a fresh clone could never produce this
+    benchmark. The HF fallback renders multi-choice rows the same way the
+    bundled 150-row file does (choices into the problem text, LETTER as the
+    solution) and asserts the answer maps onto a choice before writing.
+    """
     out_dir = os.path.join(OUT_ROOT, "mathvista")
     os.makedirs(OUT_ROOT, exist_ok=True)
-    if os.path.islink(out_dir) or os.path.exists(out_dir):
+    if os.path.exists(os.path.join(out_dir, "testmini.jsonl")):
         print(f"✅ mathvista: already at {out_dir}")
         return
-    os.symlink(MATHVISTA_LOCAL, out_dir)
-    # normalize: project file is testmini.jsonl; eval expects data.jsonl
-    src = os.path.join(MATHVISTA_LOCAL, "testmini.jsonl")
-    print(f"✅ mathvista: symlinked {MATHVISTA_LOCAL} (use testmini.jsonl, {sum(1 for _ in open(src))} rows)")
+    local_full = os.path.join(MATHVISTA_LOCAL, "testmini.jsonl")
+    if os.path.exists(local_full):
+        if not os.path.exists(out_dir):
+            os.symlink(os.path.abspath(MATHVISTA_LOCAL), out_dir)
+        print(f"✅ mathvista: symlinked {MATHVISTA_LOCAL} ({sum(1 for _ in open(local_full))} rows)")
+        return
+    import string
+    from datasets import load_dataset
+    os.makedirs(os.path.join(out_dir, "images"), exist_ok=True)
+    ds = load_dataset("AI4Math/MathVista", split="testmini")
+    n = 0
+    with open(os.path.join(out_dir, "testmini.jsonl"), "w") as f:
+        for r in ds:
+            pid = int(r["pid"])
+            prob = (r["question"] or "").strip()
+            sol = str(r["answer"]).strip()
+            if r["question_type"] == "multi_choice":
+                ch = r["choices"] or []
+                prob += "\nChoices:\n" + "\n".join(
+                    f"({string.ascii_uppercase[i]}) {c}" for i, c in enumerate(ch))
+                hit = [i for i, c in enumerate(ch) if str(c).strip() == sol]
+                assert hit, f"pid {pid}: answer {sol!r} not among choices {ch}"
+                sol = string.ascii_uppercase[hit[0]]
+            img = f"images/{pid}.png"
+            cap_image(r["decoded_image"]).save(os.path.join(out_dir, img))
+            f.write(json.dumps({"problem": prob, "image": img, "solution": sol},
+                               ensure_ascii=False) + "\n")
+            n += 1
+    assert n == 1000, f"expected 1000 testmini rows, wrote {n}"
+    print(f"✅ mathvista: built full testmini from HF ({n} rows)")
 
 
 FNS = {"mathvision": mathvision, "mathverse": mathverse, "wemath": wemath, "mathvista": mathvista}
