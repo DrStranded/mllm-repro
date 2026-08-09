@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# open_r1 · qwen25vl7b · Qwen/Qwen2.5-VL-7B-Instruct · ttrl(unmaj,self-label majority-vote) · stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3+optim-offload.
+# open_r1, qwen25vl7b, Qwen/Qwen2.5-VL-7B-Instruct, ttrl(unmaj,self-label majority-vote), stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3+optim-offload.
 # HP identical to the source big7b8b launcher; only NAS activation / hardcoded secrets / wandb-online removed.
 # Requires the mllm-repro env active + MLLM_ENV_READY=1. bs/ga/vllm/steps overridable via env.
 # smoke: MAX_STEPS=1 MAX_SAMPLES=64 bash examples/openr1_qwen25vl7b_ttrl.sh

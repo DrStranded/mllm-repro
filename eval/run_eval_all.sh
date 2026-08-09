@@ -39,7 +39,7 @@ ORDER=(mathvision mathverse mathvista wemath)
 
 for b in "${ORDER[@]}"; do
   d="${DATA[$b]}"
-  if [ ! -f "$d" ]; then echo "!! 缺数据 $b: $d (先 python eval/prepare_benchmarks.py $b)"; continue; fi
+  if [ ! -f "$d" ]; then echo "!! missing data for $b: $d (run: python eval/prepare_benchmarks.py $b)"; continue; fi
   echo "==== [$b] ===="
   CUDA_VISIBLE_DEVICES="$GPU" python eval/eval_mllm.py \
     --model "$MODEL" --data "$d" --image_dir "$(dirname "$d")" \

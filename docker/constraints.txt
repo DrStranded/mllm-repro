@@ -46,7 +46,7 @@ executing==2.2.1
 fastapi==0.135.2
 filelock==3.25.2
 fire==0.7.1
-# flash-attn: NOT pinned here — built from source / resolved in Dockerfile (see resolve_flash_attn.sh); env had 2.8.3+cu128torch2.9
+# flash-attn: NOT pinned here, built from source / resolved in Dockerfile (see resolve_flash_attn.sh); env had 2.8.3+cu128torch2.9
 flashinfer-python==0.5.2
 fonttools==4.62.1
 frozenlist==1.8.0

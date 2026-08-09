@@ -20,7 +20,7 @@ REPO = os.path.dirname(HERE)
 sys.path.insert(0, REPO)  # for `trainers.*`
 from grade import extract_pred, grade  # noqa: E402
 
-# EXACT training suffix (trainers/dataset.py) — spaces inside tags matter (model was trained on this).
+# EXACT training suffix (trainers/dataset.py), spaces inside tags matter (model was trained on this).
 ANSWER_SUFFIX = " Output the thinking process in <think> </think> and final answer in <answer> </answer> tags."
 BOXED_SUFFIX = " Please reason step by step, and put your final answer within \\boxed{}."
 
@@ -60,7 +60,7 @@ def main():
         rows = rows[: args.limit]
     print(f"[eval] model={args.model}  data={args.data}  n={len(rows)}  prompt={args.prompt}", flush=True)
 
-    # Detect model family from config.json (NOT the path — colearn dirs contain both
+    # Detect model family from config.json (NOT the path, colearn dirs contain both
     # model names, e.g. "qwen25vl3b_x_internvl35_2b", which fools path-based checks).
     from transformers import AutoConfig
     cfg = AutoConfig.from_pretrained(args.model, trust_remote_code=True).to_dict()

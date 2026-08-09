@@ -1,7 +1,7 @@
 """Single-model VLM GRPO baseline (Phase 3 sanity, no cross-supervision).
 
 Trains one VLM with standard GRPO using the **dataset's ground-truth
-solution** as the reward target — no peer rendezvous, no pseudo-labels,
+solution** as the reward target, no peer rendezvous, no pseudo-labels,
 no `<group>` arg. Use this to verify the VLM training loop is healthy
 and that inline eval produces reasonable numbers before flipping on
 cross-supervision (Phase 4 via `train_mllm_co_grpo_dp.py`).
@@ -12,10 +12,10 @@ Shares with `train_mllm_co_grpo_dp.py`:
   - `reward_correctness` (math_verify grader, `<answer>` extractor)
 
 Does NOT share:
-  - Rendezvous (not needed — no peer)
+  - Rendezvous (not needed, no peer)
   - `--group` / `--peer_model_name_or_path` / `--rendezvous_dir`
   - Dual-seed bump (no peer to diverge from)
-  - `CoGRPOdpTrainer` — uses vanilla `GRPOTrainer`
+  - `CoGRPOdpTrainer`, uses vanilla `GRPOTrainer`
 """
 
 import os
@@ -71,7 +71,7 @@ _PreTrainedModel._init_weights = _safe_init_weights
 # fails with padding=False and succeeds with padding=True.
 #
 # Fix: force `padding=True` for Gemma-3 processors by wrapping apply_chat_template.
-# Padding here is harmless for the caller — TRL unpads via the attention mask right
+# Padding here is harmless for the caller, TRL unpads via the attention mask right
 # after (`needs_padding_workaround` branch), and for the non-Gemma processors this
 # wrapper is a no-op.
 from transformers.models.gemma3.processing_gemma3 import Gemma3Processor as _Gemma3Processor
@@ -88,7 +88,7 @@ def _gemma3_apply_chat_template_padded(self, *args, **kwargs):
     # ...then UNPAD before returning. This is essential: TRL only strips padding when
     # its own `needs_padding_workaround` version check fires (transformers 5.3.0), which
     # it does not on the pinned 4.57.x. Without unpadding here, TRL would take the
-    # padded ids as the literal prompt, feeding pad tokens into the model — which shows
+    # padded ids as the literal prompt, feeding pad tokens into the model, which shows
     # up as generations that never emit <end_of_turn> and run to max_completion_length
     # (clipped_ratio 1.0, reward 0). Undoing it here keeps the contract identical to the
     # unpadded call the caller expects.
@@ -217,7 +217,7 @@ def _get_text(completion):
 
 def reward_correctness(completions, solution, **kwargs):
     """1.0 iff completion's `<answer>` content matches GT (math-equivalent, or
-    same option letter for multiple-choice answers — see `mcq_grade`)."""
+    same option letter for multiple-choice answers, see `mcq_grade`)."""
     rewards = []
     for completion, ground_truth in zip(completions, solution):
         pred_answer = extract_boxed_answer(_get_text(completion))
@@ -424,7 +424,7 @@ if __name__ == "__main__":
         trust_remote_code=model_args.trust_remote_code,
         attn_implementation=model_args.attn_implementation or "flash_attention_2",
         torch_dtype=model_dtype,
-        # `use_cache` deliberately omitted — see train_mllm_co_grpo_dp.py for rationale.
+        # `use_cache` deliberately omitted, see train_mllm_co_grpo_dp.py for rationale.
     )
     quantization_config = get_quantization_config(model_args)
     if quantization_config is not None:

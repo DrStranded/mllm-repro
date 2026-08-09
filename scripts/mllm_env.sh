@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/mllm_env.sh — minimal env helper for the mllm-repro repo.
+# scripts/mllm_env.sh, minimal env helper for the mllm-repro repo.
 # The Docker image already exports all of these; source this ONLY for a
 # bare-metal / non-container run:   source scripts/mllm_env.sh
 # NO secrets and NO site-specific (NAS) paths. Supply HF_TOKEN / WANDB_API_KEY

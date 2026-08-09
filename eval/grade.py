@@ -6,7 +6,7 @@ mathruler (rule-based, the same grader MM-UPT uses). We additionally handle
 the R1-V `<answer>...</answer>` format our trained models emit, and an MCQ
 option-letter fallback (A-E) for multiple-choice benchmarks.
 
-No GPT / LLM judge — pure rule-based, fast and consistent.
+No GPT / LLM judge, pure rule-based, fast and consistent.
 """
 import re
 from mathruler.grader import extract_boxed_content, grade_answer
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     ok = 0
     for resp, gold, exp in cases:
         got = score_response(resp, gold)
-        flag = "✓" if got == exp else "✗ MISMATCH"
+        flag = "ok" if got == exp else "MISMATCH"
         if got == exp:
             ok += 1
         print(f"  {flag}  resp={resp!r:40s} gold={gold!r:10s} -> {got} (exp {exp})")

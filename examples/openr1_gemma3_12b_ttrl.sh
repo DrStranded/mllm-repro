@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# open_r1 · gemma3_12b · google/gemma-3-12b-it · ttrl(unmaj,self-label majority-vote) · stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3+optim-offload.
+# open_r1, gemma3_12b, google/gemma-3-12b-it, ttrl(unmaj,self-label majority-vote), stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3+optim-offload.
 # HP identical to the source big7b8b launcher; only NAS activation / hardcoded secrets / wandb-online removed.
 # Requires the mllm-repro env active + MLLM_ENV_READY=1. Gemma is gated: accept the license on its HF page + hf read token.
 # NOTE: Gemma uses --attn_implementation sdpa (NOT flash_attention_2). smoke: MAX_STEPS=1 MAX_SAMPLES=64 bash examples/openr1_gemma3_12b_ttrl.sh

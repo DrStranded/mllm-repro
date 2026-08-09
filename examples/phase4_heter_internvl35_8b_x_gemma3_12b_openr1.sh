@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# open_r1 · heter co-learn · A=OpenGVLab/InternVL3_5-8B-HF (sdpa) × B=google/gemma-3-12b-it (sdpa)
+# open_r1, heter co-learn, A=OpenGVLab/InternVL3_5-8B-HF (sdpa) x B=google/gemma-3-12b-it (sdpa)
 # stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3+optim-offload, 4+4 GPUs.
 # HP identical to the source big7b8b launcher; only NAS activation / hardcoded secrets / wandb-online removed.
-# ⚠️ InternVL side is sdpa on purpose (NOT flash_attention_2): InternVL-8B loads fp32 → FA2 crashes; sdpa handles fp32.
-#    (INSTALL_big7b8b.sh emitted flash_attention_2 here — that is the WRONG/stale copy; the on-disk launcher used sdpa.)
+# NOTE: InternVL side is sdpa on purpose (NOT flash_attention_2): InternVL-8B loads fp32 -> FA2 crashes; sdpa handles fp32.
+#    (INSTALL_big7b8b.sh emitted flash_attention_2 here, that is the WRONG/stale copy; the on-disk launcher used sdpa.)
 # Requires the mllm-repro env active + MLLM_ENV_READY=1. Gemma is gated (accept license + hf read token). bs/ga/vllm/steps overridable via env.
 # smoke: MAX_STEPS=1 MAX_SAMPLES=64 bash examples/phase4_heter_internvl35_8b_x_gemma3_12b_openr1.sh
 set -euo pipefail
@@ -54,7 +54,7 @@ launch_group () {
         --output_dir "$out" --vllm_gpu_memory_utilization "$mem" --attn_implementation "$attn" \
         "${COMMON[@]}" 2>&1 | tee -a "$out/train.log"
 }
-launch_group A "0,1,2,3" "$MODEL_A" "$MODEL_B" 19474 "$BASE_OUT/model_a" "$VLLM_MEM_A" "sdpa" & PID_A=$!  # was flash_attention_2: InternVL-8B loaded fp32 → FA2 crash; sdpa handles fp32
+launch_group A "0,1,2,3" "$MODEL_A" "$MODEL_B" 19474 "$BASE_OUT/model_a" "$VLLM_MEM_A" "sdpa" & PID_A=$!  # was flash_attention_2: InternVL-8B loaded fp32 -> FA2 crash; sdpa handles fp32
 launch_group B "4,5,6,7" "$MODEL_B" "$MODEL_A" 19475 "$BASE_OUT/model_b" "$VLLM_MEM_B" "sdpa" & PID_B=$!
 cleanup() { kill "$PID_A" "$PID_B" 2>/dev/null || true; }; trap cleanup EXIT INT TERM
 wait -n "$PID_A" "$PID_B"; EC=$?; cleanup; wait 2>/dev/null || true; exit "$EC"

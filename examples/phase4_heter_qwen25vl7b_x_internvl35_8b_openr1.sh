@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# open_r1 · heter co-learn · A=Qwen/Qwen2.5-VL-7B-Instruct (flash_attention_2) × B=OpenGVLab/InternVL3_5-8B-HF (flash_attention_2)
+# open_r1, heter co-learn, A=Qwen/Qwen2.5-VL-7B-Instruct (flash_attention_2) x B=OpenGVLab/InternVL3_5-8B-HF (flash_attention_2)
 # stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3+optim-offload, 4+4 GPUs.
 # HP identical to the source big7b8b launcher; only NAS activation / hardcoded secrets / wandb-online removed.
 # Requires the mllm-repro env active + MLLM_ENV_READY=1. bs/ga/vllm/steps overridable via env.

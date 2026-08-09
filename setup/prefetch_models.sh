@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# prefetch_models.sh  (DOCKER_SLIM_PLAN §11.5#5 / §11.8 — model prefetch)
+# prefetch_models.sh  (DOCKER_SLIM_PLAN §11.5#5 / §11.8, model prefetch)
 # -----------------------------------------------------------------------------
 # Model weights are NOT committed. Training/eval reference models by HF id and
 # read them from the HF hub cache ($HF_HOME/hub). This script pulls them there.
 #
 # On the Google-internal target egress is ONLINE (via proxy), so prefetch is
-# mostly a speed/cache optimization — training would download on first use too.
+# mostly a speed/cache optimization, training would download on first use too.
 # On an AIR-GAPPED / offline cluster (e.g. Anvil compute nodes): run THIS script
 # on a LOGIN node that has network, then on the compute node export
 #     HF_HUB_OFFLINE=1   (and point HF_HOME at the same cache)
@@ -16,7 +16,7 @@
 #   big   (default)  = the 3 big-tier ids the main experiments use:
 #                        Qwen/Qwen2.5-VL-7B-Instruct     (ungated)
 #                        OpenGVLab/InternVL3_5-8B-HF     (ungated, apache-2.0)
-#                        google/gemma-3-12b-it           (GATED — see below)
+#                        google/gemma-3-12b-it           (GATED, see below)
 #   smoke            = the small-tier variants used for MAX_STEPS=2 smokes:
 #                        Qwen/Qwen2.5-VL-3B-Instruct
 #                        OpenGVLab/InternVL3_5-2B-HF

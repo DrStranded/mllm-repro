@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ── mllm-repro PREFLIGHT (<10 min) ─────────────────────────────────────────────
 # Validates the built image end-to-end BEFORE you commit to a ~15h full run:
-#   env gate → model download/load → flash_attention_2 (proves the FA resolver worked) →
-#   vLLM colocate generation → 2 ZeRO-3 optimizer steps → the eval/grade pipeline once.
+#   env gate -> model download/load -> flash_attention_2 (proves the FA resolver worked) ->
+#   vLLM colocate generation -> 2 ZeRO-3 optimizer steps -> the eval/grade pipeline once.
 # This is the openr1_qwen25vl7b_gt path, shrunk: MAX_STEPS=2, MAX_SAMPLES=16, tiny generations + eval.
-# NOT a repro run — HP here are deliberately reduced for speed; use examples/openr1_*.sh for real numbers.
+# NOT a repro run, HP here are deliberately reduced for speed; use examples/openr1_*.sh for real numbers.
 #
 # Usage:  export HF_TOKEN=hf_...   MLLM_ENV_READY=1
 #         export MLLM_PRE_DIR=... MLLM_EVAL_PATH=... MLLM_EVAL_IMAGE_DIR=...
@@ -57,4 +57,4 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launc
     --adam_beta2 0.95 --beta 0 --loss_type bnpo --scale_rewards group \
     --seed 42 --data_seed 42 --report_to none \
     --attn_implementation flash_attention_2 --trust_remote_code --bf16 true 2>&1 | tee -a "$BASE_OUT/train.log"
-echo "[mllm-repro] ✅ SMOKE PASSED — image validated (env, FA2, vLLM colocate, ZeRO-3 step, eval/grade). Safe to launch a full examples/openr1_*.sh run."
+echo "[mllm-repro] SMOKE PASSED, image validated (env, FA2, vLLM colocate, ZeRO-3 step, eval/grade). Safe to launch a full examples/openr1_*.sh run."

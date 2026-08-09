@@ -6,14 +6,14 @@ file rendezvous, majority-vote labeling, eval-mode short-circuit). The
 **only differences** from co-grpo-dp:
 
   1. This trainer's `processing_class` is an `AutoProcessor` (not
-     `AutoTokenizer`) at construction time — the parent `GRPOTrainer`
+     `AutoTokenizer`) at construction time, the parent `GRPOTrainer`
      handles the VLM forward path / image tokenization transparently
      so this trainer body needs no image-specific code.
   2. `_majority_vote` (from `co_label_utils`) + MCQ-aware
      `extract_and_normalize_mcq` / `normalize_mcq` (from `mcq_grade`) use R1-V
      `<answer>` tags; option-letter answers cluster by bare letter so
      `"C"` / `"C. text"` / `"option C"` vote together (instead of fragmenting).
-  3. No 4-regime / disagree / naive reward variants — only binary
+  3. No 4-regime / disagree / naive reward variants, only binary
      cross-supervision (per `mllm_co_grpo_dp_plan` memory).
 
 Cross-supervision mechanism (unchanged from co-grpo-dp):
@@ -91,7 +91,7 @@ class CoGRPOdpTrainer(GRPOTrainer):
         Group B offsets `args.seed` (+1) to diverge generation RNG. The parent
         `GRPOTrainer._get_train_sampler` builds its `RepeatSampler` with
         `seed=self.args.seed` (NOT `data_seed`), so the seed offset would also
-        reshuffle B's data — making group A's prompt-group `g` a DIFFERENT prompt
+        reshuffle B's data, making group A's prompt-group `g` a DIFFERENT prompt
         than group B's prompt-group `g`. Cross-supervision then pairs peer
         pseudo-labels with unrelated prompts (peer_agreement collapses to noise,
         reward → 0). Both groups share `data_seed`, so pinning the sampler to it
@@ -133,7 +133,7 @@ class CoGRPOdpTrainer(GRPOTrainer):
         # ---- Train mode: cross-labeling + peer rendezvous (original path) ----
         # A prompt's N rollouts are grouped contiguously in the global batch (after
         # cross-rank concatenation), but a single rank only holds a slice of that
-        # batch — its local slice length is not necessarily a multiple of
+        # batch, its local slice length is not necessarily a multiple of
         # num_generations. We therefore all-gather parsed answers within our group,
         # compute pseudo-labels globally, exchange them with the peer group, and
         # each rank writes back only its own slice of the peer's pseudo-labels.
@@ -192,7 +192,7 @@ class CoGRPOdpTrainer(GRPOTrainer):
             if len(peer_pseudo) != num_groups:
                 raise RuntimeError(
                     f"peer sent {len(peer_pseudo)} pseudo-labels for {mode} gc={gc}, "
-                    f"expected {num_groups} — groups out of sync"
+                    f"expected {num_groups}, groups out of sync"
                 )
             object_list = [peer_pseudo]
         else:
@@ -271,7 +271,7 @@ class CoGRPOdpTrainer(GRPOTrainer):
 
         # ---- 6. Delegate to parent for the actual reward function call ----
         # Parent will gather rewards_per_func across my group (not across the peer
-        # group — the two groups have disjoint process groups). Group-internal
+        # group, the two groups have disjoint process groups). Group-internal
         # gather + group-internal advantage normalization is exactly what GRPO
         # semantics call for: each model normalizes its own rewards.
         return super()._calculate_rewards(inputs, prompts, completions, completion_ids_list)

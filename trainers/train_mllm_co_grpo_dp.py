@@ -73,7 +73,7 @@ _PreTrainedModel._init_weights = _safe_init_weights
 # fails with padding=False and succeeds with padding=True.
 #
 # Fix: force `padding=True` for Gemma-3 processors by wrapping apply_chat_template.
-# Padding here is harmless for the caller — TRL unpads via the attention mask right
+# Padding here is harmless for the caller, TRL unpads via the attention mask right
 # after (`needs_padding_workaround` branch), and for the non-Gemma processors this
 # wrapper is a no-op.
 from transformers.models.gemma3.processing_gemma3 import Gemma3Processor as _Gemma3Processor
@@ -90,7 +90,7 @@ def _gemma3_apply_chat_template_padded(self, *args, **kwargs):
     # ...then UNPAD before returning. This is essential: TRL only strips padding when
     # its own `needs_padding_workaround` version check fires (transformers 5.3.0), which
     # it does not on the pinned 4.57.x. Without unpadding here, TRL would take the
-    # padded ids as the literal prompt, feeding pad tokens into the model — which shows
+    # padded ids as the literal prompt, feeding pad tokens into the model, which shows
     # up as generations that never emit <end_of_turn> and run to max_completion_length
     # (clipped_ratio 1.0, reward 0). Undoing it here keeps the contract identical to the
     # unpadded call the caller expects.
@@ -184,7 +184,7 @@ class MllmCoGRPOdpScriptArguments(ScriptArguments):
 
     group: str = field(
         default=None,
-        metadata={"help": "'A' or 'B' — which half of the cross-supervision run this launch is."},
+        metadata={"help": "'A' or 'B', which half of the cross-supervision run this launch is."},
     )
     rendezvous_dir: str = field(
         default=None,
@@ -236,7 +236,7 @@ def reward_correctness(completions, solution, **kwargs):
 
     `solution` here can be:
       - train mode: peer's pseudo-label (from majority vote), possibly the
-        sentinel `_UNLABELED_SENTINEL` for prompts the peer dropped — sentinel
+        sentinel `_UNLABELED_SENTINEL` for prompts the peer dropped, sentinel
         cannot match any parseable answer, so reward is 0 for those.
       - eval mode: dataset's real ground-truth solution (eval branch in
         trainer skips the cross-labeling override).
@@ -326,7 +326,7 @@ if __name__ == "__main__":
     # dataset in identical order so that `gathered_answers[g*G:(g+1)*G]`
     # corresponds to the SAME prompt on A and B (required for cross-
     # supervision to be meaningful). See trl/trainer/grpo_trainer.py
-    # `_get_train_sampler` — it reads `data_seed` when set, otherwise falls
+    # `_get_train_sampler`, it reads `data_seed` when set, otherwise falls
     # back to `seed`. If `data_seed` is None here, bumping `seed` alone
     # would also misalign prompts; set it explicitly.
     if script_args.group == "B":
@@ -458,14 +458,14 @@ if __name__ == "__main__":
 
     training_args.model_init_kwargs = model_kwargs
 
-    # `AutoProcessor` rather than `AutoTokenizer` — handles both the
+    # `AutoProcessor` rather than `AutoTokenizer`, handles both the
     # tokenizer (for text) and the image processor (for vision tower
     # input) in a single API. `processing_class` on the trainer accepts
     # either tokenizer or processor; for VLMs GRPOTrainer routes through
     # `processor.tokenizer` for text ops and `processor.image_processor`
     # for image preprocessing.
     #
-    # Plain AutoProcessor — kept in lockstep with train_mllm_single.py. The old
+    # Plain AutoProcessor, kept in lockstep with train_mllm_single.py. The old
     # `load_processor_for_mllm` wrapper force-loaded InternVL's *custom-code*
     # `modeling_internvl_chat.py` (a transformers-5.x post_init patch), which
     # the HF-native `InternVL3_5-*-HF` repos do not ship → OSError at step 0.
@@ -488,7 +488,7 @@ if __name__ == "__main__":
     # image_position_ids, returns the batch unchanged, then split_tensor_dict
     # naively chunks pixel_values by shape[0]/num_chunks and drops most tiles.
     # Fix: force no-tiling on processor instance + class-level kwargs defaults.
-    # (Verbatim from train_mllm_single.py — consistency mandatory.)
+    # (Verbatim from train_mllm_single.py, consistency mandatory.)
     if "internvl" in model_args.model_name_or_path.lower():
         if hasattr(processor, "image_processor"):
             if hasattr(processor.image_processor, "crop_to_patches"):
@@ -506,7 +506,7 @@ if __name__ == "__main__":
     # Gemma3-IT uses <end_of_turn> (id=106) as the turn terminator, but HF
     # tokenizer.eos_token_id still returns 1 (<eos>). Patch both tokenizer and
     # generation_kwargs so TRL and vLLM agree on the stop token set.
-    # (Verbatim from train_mllm_single.py — consistency mandatory.)
+    # (Verbatim from train_mllm_single.py, consistency mandatory.)
     _model_name_lower = model_args.model_name_or_path.lower()
     if "gemma-3" in _model_name_lower or "gemma3" in _model_name_lower:
         _GEMMA3_EOT_ID = 106  # <end_of_turn>
@@ -516,7 +516,7 @@ if __name__ == "__main__":
         training_args.generation_kwargs = {**_existing, "stop_token_ids": [1, _GEMMA3_EOT_ID]}
 
     ################
-    # Dataset — two groups use the same seed/world_size so RepeatSampler
+    # Dataset, two groups use the same seed/world_size so RepeatSampler
     # yields identical index sequences, ensuring both groups train on the
     # same prompts at every generation step (required for cross-labeling).
     ################

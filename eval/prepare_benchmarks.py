@@ -50,7 +50,7 @@ def _write(bench, rows_iter, total=None):
             n += 1
             if n % 200 == 0:
                 print(f"  {bench}: {n}{'/'+str(total) if total else ''}", flush=True)
-    print(f"✅ {bench}: {n} examples -> {jsonl}")
+    print(f"{bench}: {n} examples -> {jsonl}")
 
 
 def _strip_img_tags(s):
@@ -107,13 +107,13 @@ def mathvista():
     out_dir = os.path.join(OUT_ROOT, "mathvista")
     os.makedirs(OUT_ROOT, exist_ok=True)
     if os.path.exists(os.path.join(out_dir, "testmini.jsonl")):
-        print(f"✅ mathvista: already at {out_dir}")
+        print(f"mathvista: already at {out_dir}")
         return
     local_full = os.path.join(MATHVISTA_LOCAL, "testmini.jsonl")
     if os.path.exists(local_full):
         if not os.path.exists(out_dir):
             os.symlink(os.path.abspath(MATHVISTA_LOCAL), out_dir)
-        print(f"✅ mathvista: symlinked {MATHVISTA_LOCAL} ({sum(1 for _ in open(local_full))} rows)")
+        print(f"mathvista: symlinked {MATHVISTA_LOCAL} ({sum(1 for _ in open(local_full))} rows)")
         return
     import string
     from datasets import load_dataset
@@ -138,7 +138,7 @@ def mathvista():
                                ensure_ascii=False) + "\n")
             n += 1
     assert n == 1000, f"expected 1000 testmini rows, wrote {n}"
-    print(f"✅ mathvista: built full testmini from HF ({n} rows)")
+    print(f"mathvista: built full testmini from HF ({n} rows)")
 
 
 FNS = {"mathvision": mathvision, "mathverse": mathverse, "wemath": wemath, "mathvista": mathvista}

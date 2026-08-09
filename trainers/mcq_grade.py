@@ -13,7 +13,7 @@ inside `<answer>` (e.g. `"C. Pythagorean theorem"`). The math grader
 (`grade_answer`) scores that as wrong, so a model that picked the right
 option still gets reward 0. On `multimodal-open-r1-8k-verified` this drove
 Qwen2.5-VL-3B's train reward to ~0.01 (far below the 0.25 MCQ chance floor)
-even though ~5/8 sampled completions were actually correct — a grading
+even though ~5/8 sampled completions were actually correct, a grading
 bug, not a learning failure. See `QWEN_FLAT_ZWZ_INVESTIGATION.md`.
 
 Design (validated against the real open-r1 gold distribution)
@@ -31,12 +31,12 @@ strictly safer than letter-first matching:
 Known residual limits (accepted, ~0.3% of open-r1):
   - golds like `"90 degrees (D)"` (value + trailing bare paren) are not
     letter-matched (a trailing `"(D)"` rule would risk catching point labels).
-  - completions that omit the `<answer>` tag still score 0 (intentional —
+  - completions that omit the `<answer>` tag still score 0 (intentional -
     learning the R1-V format is a training objective).
 
 NOT addressed here (flagged separately): `_majority_vote` clusters rollouts
 by `normalize_answer`, so `"C. Pythagorean"` and `"C"` hash to different
-keys and fragment the vote — this degrades self-label / co-learn pseudo-label
+keys and fragment the vote, this degrades self-label / co-learn pseudo-label
 quality on MCQ data and needs its own fix.
 """
 
@@ -45,7 +45,7 @@ import re
 from co_label_utils import _get_text, extract_boxed_answer, grade_answer, normalize_answer
 
 # Conservative option-letter patterns. Only forms that are unambiguously an
-# A–E choice — never a bare mid-sentence letter (avoids geometry point labels).
+# A–E choice, never a bare mid-sentence letter (avoids geometry point labels).
 _LEAD_ONLY = re.compile(r"^\s*\(?\s*([A-E])\s*\)?\s*$", re.IGNORECASE)            # "C", "(C)", "C)"
 _LEAD = re.compile(r"^\s*\(?\s*([A-E])\s*[.):\]]", re.IGNORECASE)                  # "C. text", "A) text"
 _PHRASE = re.compile(r"(?:answer|option|choice)\s*(?:is|:)?\s*\(?\s*([A-E])\b", re.IGNORECASE)  # "answer is C"

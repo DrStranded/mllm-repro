@@ -1,4 +1,4 @@
-# EXPECTED_RESULTS — acceptance criterion for the mllm repro (small + big tier)
+# EXPECTED_RESULTS, acceptance criterion for the mllm repro (small + big tier)
 
 This file is the **acceptance target** for a reproduction run. After you train one of
 the 15 experiments (9 big-tier 7B/8B/12B + 6 small-tier 2B/3B/4B) and evaluate it with
@@ -7,17 +7,17 @@ the 15 experiments (9 big-tier 7B/8B/12B + 6 small-tier 2B/3B/4B) and evaluate i
 preserves the qualitative ordering (`trained > base`, `co-learn ≈ GT`, both `≥ TTRL`
 within noise).
 
-> **Small-tier reference numbers** live in the shipped CSVs (see the honesty note below) —
+> **Small-tier reference numbers** live in the shipped CSVs (see the honesty note below) -
 > those rows are exactly the small tier, so #10–#15 have real targets to hit. The big tier
 > is the sparser half.
 
 > **Read the honesty note first.** The three shipped result CSVs
 > (`RESULTS_bestval_4bench.csv`, `RESULTS_endpoint_4bench.csv`, `RESULTS_ALL_mllm.csv`)
-> contain **only small-tier (InternVL-2B / Qwen-VL-3B) rows** — none of the 9 big-tier
+> contain **only small-tier (InternVL-2B / Qwen-VL-3B) rows**, none of the 9 big-tier
 > experiments are in them. Most big-tier runs were done on ByteDance pods and were not
 > captured into those CSVs. What big-tier numbers we *do* have come from pod eval
 > staging (`work_dirs/eval/scale_new/`) and cover only **5 of the ~11 model outputs**.
-> The rest are marked **"to be filled after first repro"** — your first clean run *is*
+> The rest are marked **"to be filled after first repro"**, your first clean run *is*
 > the reference for those, so record it.
 
 ---
@@ -28,19 +28,19 @@ All numbers below are produced by this repo's `eval/` layer. To be comparable th
 **must** be reproduced the same way:
 
 - **Benchmarks (4):**
-  - **MathVision** — HF `MathLLMs/MathVision`, 3040 items (fetched at runtime).
-  - **MathVerse** — HF `AI4Math/MathVerse`, `testmini` 3940 items (fetched at runtime).
-  - **MathVista** — local `data/mathvista/testmini.jsonl`, 1000 items (the only bench
+  - **MathVision**, HF `MathLLMs/MathVision`, 3040 items (fetched at runtime).
+  - **MathVerse**, HF `AI4Math/MathVerse`, `testmini` 3940 items (fetched at runtime).
+  - **MathVista**, local `data/mathvista/testmini.jsonl`, 1000 items (the only bench
     bundled in-repo). An in-loop 150-item subset is used *during training* to pick the
     best checkpoint; the final number uses the full 1000.
-  - **We-Math** — HF `We-Math/We-Math`, 1740 items (fetched at runtime).
+  - **We-Math**, HF `We-Math/We-Math`, 1740 items (fetched at runtime).
 - **`avg` = the simple arithmetic mean of the 4 per-benchmark accuracies** (confirmed in
   `eval/aggregate_row.py`: `sum(accs)/len(accs)`, then ×100). It is *not* item-weighted.
-  If a bench is missing it is dropped from the mean and shown as `NA` — a partial `avg`
+  If a bench is missing it is dropped from the mean and shown as `NA`, a partial `avg`
   is not comparable to a full one.
 - **Decoding:** greedy, **temperature = 0** (deterministic sampling). Collapsed / runaway
   checkpoints are capped at `--max_tokens 1024`.
-- **Grader:** rule-based **`mathruler`** (`eval/grade.py`) with MCQ value→option repair.
+- **Grader:** rule-based **`mathruler`** (`eval/grade.py`) with MCQ valueoption repair.
   **No LLM judge.** This matters: a rule grader is stricter and less forgiving of format
   drift than an LLM judge, so these numbers are systematically a few points below what an
   LLM-judged leaderboard would report for the same model (see tolerance section).
@@ -64,15 +64,15 @@ dataset-agnostic and can also run mmr1). Co-learn runs produce **two** model out
 
 | # | Model(s) | Method | Attn | Captured big-tier avg | Status |
 |---|----------|--------|------|-----------------------|--------|
-| 1 | Qwen2.5-VL-7B-Instruct | GT | FA2 | — | **to be filled after first repro** |
-| 2 | Qwen2.5-VL-7B-Instruct | TTRL | FA2 | — | **to be filled after first repro** |
-| 3 | InternVL3_5-8B-HF | GT | FA2 | — | **to be filled after first repro** |
-| 4 | InternVL3_5-8B-HF | TTRL | FA2 | **54.16** | ✅ captured |
-| 5 | gemma-3-12b-it | GT | sdpa | **45.17** | ✅ captured |
-| 6 | gemma-3-12b-it | TTRL | sdpa | **44.45** | ✅ captured |
-| 7 | Qwen-VL-7B × InternVL-8B | co-learn | FA2×FA2 | — | **to be filled** (both sides) |
-| 8 | Qwen-VL-7B × Gemma-12B | co-learn | FA2×sdpa | **44.81** (Gemma side `model_b`) | ⚠️ partial — Qwen-7B side to be filled |
-| 9 | InternVL-8B × Gemma-12B | co-learn | sdpa×sdpa | **47.56** (Gemma side `model_b`) | ⚠️ partial — Intern-8B side to be filled |
+| 1 | Qwen2.5-VL-7B-Instruct | GT | FA2 |, | **to be filled after first repro** |
+| 2 | Qwen2.5-VL-7B-Instruct | TTRL | FA2 |, | **to be filled after first repro** |
+| 3 | InternVL3_5-8B-HF | GT | FA2 |, | **to be filled after first repro** |
+| 4 | InternVL3_5-8B-HF | TTRL | FA2 | **54.16** | captured |
+| 5 | gemma-3-12b-it | GT | sdpa | **45.17** | captured |
+| 6 | gemma-3-12b-it | TTRL | sdpa | **44.45** | captured |
+| 7 | Qwen-VL-7B × InternVL-8B | co-learn | FA2×FA2 |, | **to be filled** (both sides) |
+| 8 | Qwen-VL-7B × Gemma-12B | co-learn | FA2×sdpa | **44.81** (Gemma side `model_b`) | partial, Qwen-7B side to be filled |
+| 9 | InternVL-8B × Gemma-12B | co-learn | sdpa×sdpa | **47.56** (Gemma side `model_b`) | partial, Intern-8B side to be filled |
 
 ### 2b. Per-benchmark for the captured big-tier rows
 
@@ -91,20 +91,20 @@ when you re-run exps 4/5/6 and the Gemma sides of 8/9.
 - They are **not** in the three shipped `RESULTS_*` CSVs. They were recovered from pod
   eval staging under `work_dirs/eval/scale_new/*/results.csv`. The model paths are
   pod-side HF-hub layouts (`q1716523669/mllm-open-r1-...`), i.e. **pushed / endpoint**
-  checkpoints — not confirmed to be the in-loop best-val checkpoint.
+  checkpoints, not confirmed to be the in-loop best-val checkpoint.
 - The eval environment that produced them was the **pod** (torch 2.10 / vllm 0.18), not
   the frozen Anvil stack this repo ships (torch 2.9.0 / vllm 0.11.2). Cross-arch kernel
   differences alone can move a bench ±1–2 pts.
 - For the two co-learn rows (#8, #9) we only have the **Gemma partner** (`model_b`); the
   Qwen-7B (#8) and InternVL-8B (#9) partners were never captured.
 - **No big-tier `base` row was captured** (`scale_new/gemma12b_base/results.csv` is
-  empty), so exact base→trained deltas at 12B cannot be stated from this repo. Use the
+  empty), so exact basetrained deltas at 12B cannot be stated from this repo. Use the
   small-tier deltas in §3 for the *shape* of the improvement.
 - **Treat these 5 as directional anchors, not gold acceptance targets.** The intended
   final acceptance numbers should be a protocol-consistent rerun on the shipped stack;
   when you produce one, overwrite these with your captured values and note the stack.
 - (A stray `scale_new_t4096/gemma12b_ttrl` row exists with MathVision 28.59 and the other
-  three benches `NA` — that is an incomplete rerun, ignore it.)
+  three benches `NA`, that is an incomplete rerun, ignore it.)
 
 ---
 
@@ -112,12 +112,12 @@ when you re-run exps 4/5/6 and the Gemma sides of 8/9.
 
 The core paper claim is **co-learn ≈ GT** (heterogeneous co-learning matches the
 ground-truth-reward upper bound, and both beat `base` and self-labeling `TTRL`), and the
-project note is that this **holds from 3B → 7B/8B**. The big-tier repro should reproduce
+project note is that this **holds from 3B 7B/8B**. The big-tier repro should reproduce
 the same *ordering*, even if absolute values differ. The cleanest small-tier evidence is
 the curated `paper_artifacts/results_tables/mllm_main_MASTER.csv` (best-val, same 4-bench
 protocol). Reproduced here as % accuracy:
 
-**open_r1 (the big-tier training set → most relevant analog):**
+**open_r1 (the big-tier training set most relevant analog):**
 
 | Arm (tier) | base | GT | TTRL | co-learn |
 |------------|-----:|---:|-----:|---------:|
@@ -131,14 +131,14 @@ protocol). Reproduced here as % accuracy:
 |------------|-----:|---:|-----:|---------:|
 | Qwen2.5-VL-**3B** | 37.24 | 41.03 | 37.97 | **41.12** |
 | InternVL3_5-**2B** | 43.11 | 44.65 | 45.30 | 45.15 |
-| gemma-3-**4B** | — | — | 38.68 | — |
+| gemma-3-**4B** |, |, | 38.68 |, |
 
 Reading of the reference:
 - On **open_r1**, `co-learn ≥ GT` for InternVL-2B and Qwen-VL-3B, and both clear `base`
   by ~+11–13 pts and beat `TTRL`. That is the "co-learn ≈ GT" headline your big-tier run
   should echo (e.g. exp #7 Qwen7B×Intern8B co-learn should sit at/above the #1/#3 GT runs
   once those are captured).
-- **TTRL is the fragile arm** — it matches GT on stable arms but *collapses* on others
+- **TTRL is the fragile arm**, it matches GT on stable arms but *collapses* on others
   (Qwen-VL-3B mmr1: 37.97, below base; and endpoint TTRL can implode entirely, see §1).
   So do not be alarmed if a big-tier TTRL run underperforms its GT twin.
 - The gemma-4B small arm is the weakest and its heterogeneous pairing is lossy
@@ -160,7 +160,7 @@ produced the §2b anchors. So exact-match is not the goal.
 - **Per-exp `avg` tolerance:** target **within ±2–3 absolute points** of the anchor
   (for exps #4/#5/#6 and the Gemma sides of #8/#9). For the not-yet-captured exps
   (#1/#2/#3/#7 and the partner sides of #8/#9), the **first successful repro sets the
-  reference** — record its 4-bench row into this file with the stack it ran on.
+  reference**, record its 4-bench row into this file with the stack it ran on.
 - **Do not compare these to public leaderboards.** The eval protocol here (greedy T=0,
   rule-based `mathruler` grader, this repo's prompt template, no LLM judge) differs from
   official leaderboard protocols by roughly **~1–3%** on its own, in addition to model
@@ -177,5 +177,5 @@ produced the §2b anchors. So exact-match is not the goal.
    best-val checkpoint reported.
 
 If (1) holds but (2) is outside band on the pod-anchored rows, that is most likely the
-torch2.9/vllm0.11.2-vs-pod stack gap or best-vs-endpoint checkpoint mismatch — note it and
+torch2.9/vllm0.11.2-vs-pod stack gap or best-vs-endpoint checkpoint mismatch, note it and
 prefer the ordering criterion, which is the paper's actual claim.

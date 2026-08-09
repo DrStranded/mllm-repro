@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# prepare_data.sh  (DOCKER_SLIM_PLAN §11.3 / §11.5#5,#7 — data + eval prep)
+# prepare_data.sh  (DOCKER_SLIM_PLAN §11.3 / §11.5#5,#7, data + eval prep)
 # -----------------------------------------------------------------------------
 # Builds everything the training + eval scripts read, into LOCAL paths (no
 # ByteDance NAS, no ./PATH). Two stages:
@@ -68,7 +68,7 @@ require_mathvista_inloop() {
 The training scripts need this for IN-LOOP eval / checkpoint selection, and the
 preprocessor loads it too (so it must exist before STAGE=train runs).
 
-Fix — put the MathVista testmini files under data/mathvista/ :
+Fix, put the MathVista testmini files under data/mathvista/ :
     data/mathvista/testmini_150.jsonl   (150-subset, in-loop)
     data/mathvista/testmini.jsonl       (full 1000, final 4-bench)
     data/mathvista/images/...           (images referenced by both jsonls)
@@ -81,7 +81,7 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# STAGE: train  — preprocess both datasets
+# STAGE: train , preprocess both datasets
 # ---------------------------------------------------------------------------
 run_train_stage() {
   require_mathvista_inloop
@@ -113,7 +113,7 @@ run_train_stage() {
 }
 
 # ---------------------------------------------------------------------------
-# STAGE: eval  — build 4-bench set
+# STAGE: eval , build 4-bench set
 # ---------------------------------------------------------------------------
 run_eval_stage() {
   mkdir -p "$OUT_ROOT"
@@ -142,7 +142,7 @@ run_eval_stage() {
     # No bundled MathVista -> DROP it from the list (its mathvista() would try
     # the hardcoded NAS path and crash on open()). Fetch only the 3 HF benches.
     benches=(mathvision mathverse wemath)
-    log "WARNING: no bundled MathVista at $MV_DIR — fetching only the 3 HF benches."
+    log "WARNING: no bundled MathVista at $MV_DIR, fetching only the 3 HF benches."
     log "         Final 4-bench mathvista row will be missing until you add $MV_FULL."
   fi
 
@@ -152,7 +152,7 @@ run_eval_stage() {
     "$PYTHON" eval/prepare_benchmarks.py "$b"
   done
   log "4-bench eval set ready under: $OUT_ROOT"
-  log "   mathvision/data.jsonl · mathverse/data.jsonl · wemath/data.jsonl · mathvista/testmini.jsonl"
+  log "   mathvision/data.jsonl, mathverse/data.jsonl, wemath/data.jsonl, mathvista/testmini.jsonl"
 }
 
 # --- dispatch -----------------------------------------------------------------
@@ -171,7 +171,7 @@ cat <<EOF
 ============================================================================
  DONE.  Export these before launching training (trainers/train_mllm_single.py):
 ----------------------------------------------------------------------------
- # (1) preprocessed train set — pick ONE per run:
+ # (1) preprocessed train set, pick ONE per run:
  export MLLM_PRE_DIR=$PRE_ROOT/mmr1_8k        # or: $PRE_ROOT/openr1_8k
  # (2) in-loop eval set (MathVista-150) for checkpoint selection:
  export MLLM_EVAL_PATH=$MV_INLOOP

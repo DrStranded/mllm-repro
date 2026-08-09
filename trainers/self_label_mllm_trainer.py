@@ -1,4 +1,4 @@
-"""Self-supervised GRPO with majority-vote pseudo-labels — multimodal (VLM) variant.
+"""Self-supervised GRPO with majority-vote pseudo-labels, multimodal (VLM) variant.
 
 Port of un-grpo-maj/self_label_trainer.py to mllm-co-grpo-dp. The reward-side
 logic (majority-vote over the N rollouts → pseudo-label → reward) is
@@ -39,7 +39,7 @@ class SelfLabelingGRPOTrainer(GRPOTrainer):
         log_oracle_accuracy (`bool`, *optional*, defaults to `True`):
             If `True`, also log how often the pseudo-label matches the real
             `solution` from the dataset (metric `self_labeling/pseudo_label_matches_gt`).
-            Purely diagnostic — the real label does not influence training.
+            Purely diagnostic, the real label does not influence training.
     """
 
     def __init__(
@@ -61,7 +61,7 @@ class SelfLabelingGRPOTrainer(GRPOTrainer):
         #      so the parent's reward path (reward_correctness) compares the
         #      completion against ground truth via grade_answer.
         #   2. self.num_generations (=train value, e.g. 8) is not used to divide
-        #      N_global — parent uses num_generations_eval (typically 1), so
+        #      N_global, parent uses num_generations_eval (typically 1), so
         #      the divisibility assertion here would crash in eval (e.g. 4 % 8).
         #   3. self_labeling/* metrics are intentionally not logged in eval
         #      because they have no meaning without majority-vote pseudo-labels.
@@ -69,7 +69,7 @@ class SelfLabelingGRPOTrainer(GRPOTrainer):
             return super()._calculate_rewards(inputs, prompts, completions, completion_ids_list)
 
         # A prompt's N rollouts are grouped *contiguously in the global batch* (after
-        # cross-rank concatenation), but a single rank only holds a slice of that batch —
+        # cross-rank concatenation), but a single rank only holds a slice of that batch -
         # its local slice length is not necessarily a multiple of num_generations. We
         # therefore all-gather the parsed answers, compute pseudo-labels globally, and
         # each rank writes back only its own slice.

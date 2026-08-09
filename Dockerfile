@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 # ============================================================================
-# mllm-repro — reproducibility image for the MLLM co-GRPO-DP experiments.
+# mllm-repro, reproducibility image for the MLLM co-GRPO-DP experiments.
 #
 # STACK B (the FROZEN, PROVEN Anvil env `mllm-cogrpodp-v2`; see DOCKER_SLIM_PLAN
 # §11.1 / §11.9):
-#     torch 2.9.x + cu128   (provided by the pytorch base image — NOT reinstalled)
+#     torch 2.9.x + cu128   (provided by the pytorch base image, NOT reinstalled)
 #     vllm  0.11.2
 #     transformers 4.57.0
 #     deepspeed 0.18.0
@@ -16,7 +16,7 @@
 # NO resolver and can never clobber the base image's torch/CUDA stack.
 #
 # This is a build-and-iterate runbook image for a Claude Code agent, not a
-# push-button appliance. Every version / flag below is deliberate — read the
+# push-button appliance. Every version / flag below is deliberate, read the
 # inline comments before changing anything.
 # ============================================================================
 
@@ -28,10 +28,10 @@
 FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-devel AS fa-build
 
 ARG FA_VERSION=2.8.3
-# MAX_JOBS caps parallel nvcc — flash-attn units are RAM-hungry (~3-5 GB each).
+# MAX_JOBS caps parallel nvcc, flash-attn units are RAM-hungry (~3-5 GB each).
 # Lower to 2 if the builder OOMs; raise via --build-arg MAX_JOBS=8 on a big host.
 ARG MAX_JOBS=4
-# flash-attn 2.8.3 IGNORES TORCH_CUDA_ARCH_LIST — it reads FLASH_ATTN_CUDA_ARCHS.
+# flash-attn 2.8.3 IGNORES TORCH_CUDA_ARCH_LIST, it reads FLASH_ATTN_CUDA_ARCHS.
 # 80 = A100 (sm_80), 90 = H100 (sm_90). Add "100" here for Blackwell if needed.
 ENV MAX_JOBS=${MAX_JOBS} \
     FLASH_ATTENTION_FORCE_BUILD=TRUE \
@@ -60,7 +60,7 @@ RUN pip wheel --no-build-isolation --no-deps "flash-attn==${FA_VERSION}" -w /whe
 # ----------------------------------------------------------------------------
 FROM pytorch/pytorch:2.9.0-cuda12.8-cudnn9-devel
 
-# Stack-B pins. These MUST stay at the frozen values (§11.1) — do NOT bump to the
+# Stack-B pins. These MUST stay at the frozen values (§11.1), do NOT bump to the
 # aspirational torch2.10 / vllm0.18 / tf4.57.6 stack, which was never validated.
 ARG TRANSFORMERS_VERSION=4.57.0
 ARG VLLM_VERSION=0.11.2
@@ -77,7 +77,7 @@ ARG TRL_REF=9881fe1e14fb2a628165a75dcd309e75ef7930d4
 #  We deliberately DO NOT set TRANSFORMERS_CACHE (it silently redirects HF
 #  lookups to an empty dir → offline LocalEntryNotFoundError), and we deliberately
 #  DO NOT set HF_HUB_ENABLE_HF_TRANSFER (hf_transfer is NOT in the closure; =1
-#  would hard-fail every download — §11.5 #3).
+#  would hard-fail every download, §11.5 #3).
 ENV PYTHONNOUSERSITE=1 \
     PYTHONUNBUFFERED=1 \
     HF_HOME=/cache/hf \
@@ -103,7 +103,7 @@ WORKDIR /workspace
 # --- Python packages ---------------------------------------------------------
 # constraints.txt is a COMPLETE pip-freeze lockfile (every transitive dep pinned),
 # so it can be replayed with --no-deps: pip installs each exact version and runs
-# no dependency resolution — which is what keeps it from touching the base torch.
+# no dependency resolution, which is what keeps it from touching the base torch.
 COPY docker/constraints.txt /tmp/constraints.txt
 
 # Strip the packages the base image OWNS and that must NOT be reinstalled:

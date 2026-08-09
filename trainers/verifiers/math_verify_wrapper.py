@@ -5,7 +5,7 @@ baseline uses). CPU verification on 2026-05-15 surfaced two issues that
 made math_verify unsuitable for this project:
 
 1. `verify(parse("\\sqrt{2}\\pi"), parse("\\sqrt{2}\\pi"))` returns
-   `False` (self-fail on irrational products) — produces false-negative
+   `False` (self-fail on irrational products), produces false-negative
    rewards on geometry answers containing `\\sqrt` and `\\pi`.
 2. `latex2sympy2_extended` (math_verify dep) pins antlr4 4.13.2, which
    conflicts with the antlr4 4.7.2 pinned by `latex2sympy2` in the marti
@@ -19,7 +19,7 @@ It bakes in:
   - Unit word stripping (`degree`, `cm`, `meter`, …) and `^\\circ`
   - Tuple/list element-wise equality with fraction-reduction guards
 
-⚠️ Unicode `°` is NOT covered by qwen's `_normalize` (only the LaTeX
+WARN Unicode `°` is NOT covered by qwen's `_normalize` (only the LaTeX
 `^\\circ` form and the word `degree` are). GEOQA pseudo-labels and model
 completions both use the raw `°` character, so this wrapper pre-strips it
 before delegating to qwen. Same for the raw `π` character.
@@ -29,7 +29,7 @@ Three callers share this module, mirroring co-grpo-dp's three-way design:
 1. `_majority_vote` in `co_label_utils.py` (uses `normalize_answer` as a
    fast hash key for clustering, no sympy cost).
 2. `reward_correctness` in `train_mllm_co_grpo_dp.py` (uses `grade_answer`
-   for true math equivalence — robust to format diffs in peer pseudo-labels).
+   for true math equivalence, robust to format diffs in peer pseudo-labels).
 3. `mllm_co_grpo_dp_trainer._calculate_rewards` eval-mode short-circuit
    (delegates to parent reward path, so eval accuracy uses the same
    `grade_answer` against the dataset's ground-truth solution).
@@ -92,7 +92,7 @@ def extract_boxed_balanced(text):
     or the braces never close.
 
     Provided here for reuse by math-style projects (co-opd, co-grpo-dp) that
-    share this wrapper. mllm itself does not call this — R1-V uses
+    share this wrapper. mllm itself does not call this, R1-V uses
     `<answer>...</answer>` tags, not `\\boxed{}`.
     """
     if text is None:

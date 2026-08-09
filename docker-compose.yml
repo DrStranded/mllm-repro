@@ -1,5 +1,5 @@
 # ============================================================================
-# docker-compose.yml — convenience wrapper for the mllm-repro image.
+# docker-compose.yml, convenience wrapper for the mllm-repro image.
 #
 # This service models the SINGLE-MODEL run (one 8-GPU ZeRO-3 world, e.g.
 # examples/openr1_qwen25vl7b_gt.sh). It encodes the flags the raw `docker run`
@@ -17,7 +17,7 @@
 #   2. docker compose up -d           # builds + starts an idle, GPU-ready box
 #   3. docker compose exec mllm bash  # then: preprocess data, run an example
 #
-# Host bind-mount paths are overridable WITHOUT editing this file — export or put
+# Host bind-mount paths are overridable WITHOUT editing this file, export or put
 # in .env:  HOST_HF_CACHE, HOST_DATA, HOST_OUTPUTS  (these are compose-only
 # interpolation vars and are NOT injected into the container's environment).
 # ============================================================================
@@ -31,7 +31,7 @@ services:
     image: mllm-repro:th2.9-cu128-vllm0.11.2
 
     # Credentials + wandb mode. env_file injects HF_TOKEN / WANDB_API_KEY /
-    # WANDB_MODE into the container. Keep ONLY those three in .env — do not add
+    # WANDB_MODE into the container. Keep ONLY those three in .env, do not add
     # HF_HOME etc. there or it would override the image's in-container paths.
     env_file: .env
 

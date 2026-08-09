@@ -50,7 +50,7 @@ GEOQA_DATASET = "leonardPKU/GEOQA_R1V_Train_8K"
 # `prompt` column (OpenMMReasoner); answer="@reward" reads
 # reward_model["ground_truth"]; answer="@sol_answer" reads the `<answer>` tag
 # out of the `solution` column (open-r1). MMFineReason is one repo with two
-# splits (rl / sft) — the `#sft` key selects the sft split via spec["hf_id"].
+# splits (rl / sft), the `#sft` key selects the sft split via spec["hf_id"].
 # "<image>" placeholders in question text are stripped (the prompt builder
 # injects the image part separately).
 ZWZ_37K = "williamium/zwz-37k"
@@ -103,7 +103,7 @@ def _strip_answer_tag(text):
 def _make_prompt(question_text):
     """R1-V style prompt: no system role, multimodal user content (image + text).
 
-    Content **must** be a list with an explicit `{"type": "image"}` part — both
+    Content **must** be a list with an explicit `{"type": "image"}` part, both
     Qwen2.5-VL and InternVL3.5 chat templates branch on
     `message['content'] is string`:
       - string content → text is rendered as-is, **no image placeholder emitted**
@@ -212,7 +212,7 @@ def _load_spec_dataset(dataset_name):
         # image bytes are combined into a single shard (ArrowInvalid: offset
         # overflow). Capping here keeps each image ~200-500KB; also speeds the
         # map and shrinks the on-disk cache. (Distinct from the column prune
-        # below, which fixes CPU-RAM OOM — this fixes the Arrow write-size limit.)
+        # below, which fixes CPU-RAM OOM, this fixes the Arrow write-size limit.)
         img = _cap_image(img)
         if q_f == "@chat":
             question = _extract_chat_text(ex["prompt"])
@@ -263,13 +263,13 @@ def load_dataset(dataset_name):
 
     Returns:
         `tuple[Dataset, Dataset]`: each row has `prompt` (list), `image` (PIL),
-        `solution` (str — bare answer, `<answer>` wrapper pre-stripped).
+        `solution` (str, bare answer, `<answer>` wrapper pre-stripped).
 
     Env vars (optional):
         MLLM_EVAL_PATH: jsonl eval set; if set, train on ALL of train (no holdout).
         MLLM_EVAL_IMAGE_DIR: dir for relative image paths in MLLM_EVAL_PATH.
         MAX_SAMPLES: truncate train to first N (sanity / debug only).
-        MLLM_PRE_DIR: opt-in fast path — a pre-capped/pruned train set saved
+        MLLM_PRE_DIR: opt-in fast path, a pre-capped/pruned train set saved
             offline by tools/preprocess_mllm_dataset.py. Skips the slow
             single-process image map entirely. Eval still comes from
             MLLM_EVAL_PATH (small, live). Unset → default path below, unchanged.
@@ -304,7 +304,7 @@ def load_dataset(dataset_name):
 
         def _format(example):
             # CLEVR/GEOQA store solution as '<answer> X </answer>'. Strip the
-            # wrapper so `solution` is the bare gold (e.g. '3', '145°') — matches
+            # wrapper so `solution` is the bare gold (e.g. '3', '145°'), matches
             # what reward_correctness extracts from completions.
             raw_sol = str(example["solution"])
             stripped = _strip_answer_tag(raw_sol)

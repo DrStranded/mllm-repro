@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# resolve_flash_attn.sh  (DOCKER_SLIM_PLAN §11.1 — flash-attn RESOLVER)
+# resolve_flash_attn.sh  (DOCKER_SLIM_PLAN §11.1, flash-attn RESOLVER)
 # -----------------------------------------------------------------------------
 # flash-attn is NOT committed to this repo (the built .so is ~952MB). This script
 # makes it appear, using the cheapest path that works on THIS machine, and prints
@@ -11,7 +11,7 @@
 #   For that stack the official Dao-AILab prebuilt wheel EXISTS:
 #     flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl
 #   ("must compile from source" is only true for torch 2.10, which has cu13-only
-#    wheels — we do NOT target 2.10 here.)
+#    wheels, we do NOT target 2.10 here.)
 #
 # Resolution order (each falls through to the next on failure):
 #   PATH A  import flash_attn already works at the wanted version   -> use it

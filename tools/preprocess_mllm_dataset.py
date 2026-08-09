@@ -4,7 +4,7 @@ Run once per (dataset, MAX_SAMPLES). Training then loads the result instantly
 via MLLM_PRE_DIR (see `dataset.load_dataset`), skipping the slow single-process
 image map (full-res decode + resize) that otherwise runs on every launch and
 on every DDP rank. The saved set already has capped (<=1024 long side), pruned,
-RGB images, so no per-run map is needed. Eval is NOT saved — it stays live from
+RGB images, so no per-run map is needed. Eval is NOT saved, it stays live from
 MLLM_EVAL_PATH (small).
 
 Usage:

@@ -9,7 +9,7 @@ Protocol per exchange (producer/consumer):
     1. Write own payload atomically to  <dir>/<mode>_<counter>_<me>.json  (tmp + rename)
     2. Poll for peer's file              <dir>/<mode>_<counter>_<peer>.json
     3. Read peer payload
-    4. Delete the *peer's* file (I consumed it). Never delete my own file —
+    4. Delete the *peer's* file (I consumed it). Never delete my own file -
        that is the peer's responsibility after they read it.
 
 This producer/consumer split prevents a race where a fast peer deletes its own
@@ -90,7 +90,7 @@ class Rendezvous:
             if time.time() - start > self.timeout:
                 raise TimeoutError(
                     f"[rendezvous {self.me}] peer {self.peer} did not write "
-                    f"{peer_path.name} within {self.timeout}s — peer likely crashed."
+                    f"{peer_path.name} within {self.timeout}s, peer likely crashed."
                 )
             time.sleep(self.poll_interval)
 
@@ -107,7 +107,7 @@ class Rendezvous:
         if peer_payload is None:
             raise RuntimeError(f"[rendezvous {self.me}] failed to parse {peer_path}")
 
-        # I consumed peer_path; delete it. Never delete my_path — that is peer's job.
+        # I consumed peer_path; delete it. Never delete my_path, that is peer's job.
         try:
             peer_path.unlink()
         except FileNotFoundError:

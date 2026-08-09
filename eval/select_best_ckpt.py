@@ -30,7 +30,7 @@ def best_ckpt(run):
         return os.path.join(run, f"checkpoint-{cks[-1]}"), None
     bstep, bval = max(ev, key=lambda x: x[1])
     ck = os.path.join(run, f"checkpoint-{bstep}")
-    if not os.path.isdir(ck):  # best step rotated out and no best_model — fall back to nearest surviving
+    if not os.path.isdir(ck):  # best step rotated out and no best_model, fall back to nearest surviving
         ck = os.path.join(run, f"checkpoint-{min(cks, key=lambda c: abs(c - bstep))}")
         return ck, ("WARN: best step %d rotated out; using nearest surviving %s (val %.4f)" % (bstep, ck, bval))
     return ck, ("best step %d val %.4f" % (bstep, bval))

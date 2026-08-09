@@ -12,7 +12,7 @@ Function names (`extract_boxed_answer`, `normalize_answer`,
 `grade_answer`) are kept identical to co-grpo-dp's so that
 `mllm_co_grpo_dp_trainer.py` and `train_mllm_co_grpo_dp.py` can mirror
 the co-grpo-dp counterparts line-by-line (repo root `CLAUDE.md`:
-"consistency over correctness" — duplicated code stays aligned even
+"consistency over correctness", duplicated code stays aligned even
 when internals differ).
 
 The 4-regime reward (`compute_4regime_reward`) from co-grpo-dp is **NOT**
@@ -33,7 +33,7 @@ from verifiers.math_verify_wrapper import normalize_answer as _normalize
 # self-consistency threshold. Cannot match any parseable answer
 # (math_verify.parse on this string returns an empty list, grade_answer
 # falls through to exact-match, which also fails), so reward evaluates
-# to 0 for every rollout in such a group — no reward-function change needed.
+# to 0 for every rollout in such a group, no reward-function change needed.
 _UNLABELED_SENTINEL = "\x00__unlabeled__\x00"
 
 
@@ -42,7 +42,7 @@ def extract_boxed_answer(text):
 
     Function named `extract_boxed_answer` (not `extract_answer_tag`) to
     keep the caller-visible signature aligned with co-grpo-dp's
-    `co_label_utils.py` — the internals differ (R1-V `<answer>` tags vs
+    `co_label_utils.py`, the internals differ (R1-V `<answer>` tags vs
     qwen-math `\\boxed{}`) but the calling pattern in train scripts and
     trainer stays identical.
 
@@ -84,7 +84,7 @@ def _extract_and_normalize(completion):
 
     Returns ``None`` when extraction fails OR yields an empty string. The
     extractor returns ``None`` (not ``""``) on miss already, but we guard
-    against empty strings here too — `_majority_vote` treats only ``None``
+    against empty strings here too, `_majority_vote` treats only ``None``
     as "no answer", so empty strings would otherwise inflate the
     denominator and depress `top_frequency` below threshold.
     """

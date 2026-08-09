@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# open_r1 / mmr1 · qwen25vl3b · Qwen/Qwen2.5-VL-3B-Instruct · gt (stock GRPO) · stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3 (no offload).
+# open_r1 / mmr1, qwen25vl3b, Qwen/Qwen2.5-VL-3B-Instruct, gt (stock GRPO), stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3 (no offload).
 # HP identical to the source small-tier launcher (trainers/dp-scripts/); only NAS activation / hardcoded secrets / wandb-online removed.
 # Requires the mllm-repro env active + MLLM_ENV_READY=1.
 # NOTE small tier: ZeRO-3 WITHOUT optimizer offload, EB=64 via bs=1 x ga=8 x 8gpu, vllm_mem 0.45, attn=flash_attention_2.
