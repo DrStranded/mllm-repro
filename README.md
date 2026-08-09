@@ -16,20 +16,6 @@ MathVista in-loop evaluation, `BS=2 GA=8`, and the required `setsid` launch patt
 
 ---
 
-## 0. Verification status (fresh rebuild, 2026-08-07..09)
-
-Everything below was exercised on a cluster that had never seen this repo,
-using the environment built by replaying `docker/constraints.txt` (§7b for the
-two traps hit on the way).
-
-| claim | evidence |
-|---|---|
-| env replays from the freeze | 243-pin verification passes, `ALL PINS MATCH` |
-| data pipeline is self-contained | mmr1 preprocess -> 5,782 prompts -> 722-step budget asserted; MathVista images rebuilt with per-row verification |
-| small tier trains end-to-end | 4 full runs, 722/722 steps each: Gemma-3-4B GT/TTRL, Qwen2.5-VL-3B GT/TTRL (`MLLM_VIT_ATTN_FIX=1`) |
-| big tier launches | Gemma padding fix ported to the co-trainer; smoke queued at time of writing |
-| 4-bench eval pipeline | data for all four benchmarks builds from a clean clone (MathVista full-1000 now falls back to HF); eval runs queued |
-
 ## 1. What this reproduces
 
 **Fifteen** multimodal RL runs across **two model tiers** — the big tier is the §5.6 scale
