@@ -147,18 +147,17 @@ RUN pip uninstall -y math-verify latex2sympy2_extended 2>/dev/null || true
 # empty before a real build if you intend to run the examples.
 COPY trainers/ /workspace/trainers/
 COPY tools/    /workspace/tools/
-COPY scripts/  /workspace/scripts/
 COPY eval/     /workspace/eval/
 COPY examples/ /workspace/examples/
 COPY setup/    /workspace/setup/
-COPY verify.py /workspace/verify.py
+COPY tools/verify.py /workspace/tools/verify.py
 
 # --- Verification: RUNTIME ONLY, never at build time -------------------------
 # Do NOT run verify.py during build (§11.5 #2): its check2/5/6 import vllm and
 # trip a qwen3_vl AutoConfig assertion / GPU paths that ABORT the build. Run it
 # once on a GPU node after the image is up:
 #
-#     docker run --rm --gpus all mllm-repro:th2.9-cu128-vllm0.11.2 python verify.py
+#     docker run --rm --gpus all mllm-repro:th2.9-cu128-vllm0.11.2 python tools/verify.py
 #
 # (Alternative to keeping build-essential for DeepSpeed cpu_adam: prebuild it with
 #  `DS_BUILD_CPU_ADAM=1 pip install --no-deps --force-reinstall deepspeed==0.18.0`

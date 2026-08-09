@@ -25,9 +25,9 @@ Two kinds of check:
     kind="gpu"  , RUNTIME-ONLY (needs a live GPU): cuda bf16 matmul, flash-attn forward.
 
 Run modes:
-    python verify.py            # all 6 checks (runtime; needs GPU)
-    python verify.py --pure     # only the 4 pure-python checks (build-gate; no GPU)
-    VERIFY_MODE=build python verify.py   # same as --pure
+    python tools/verify.py            # all 6 checks (runtime; needs GPU)
+    python tools/verify.py --pure     # only the 4 pure-python checks (build-gate; no GPU)
+    VERIFY_MODE=build python tools/verify.py   # same as --pure
 """
 
 from __future__ import annotations
