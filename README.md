@@ -76,17 +76,3 @@ bash eval/run_eval_all.sh --model [checkpoint] --prompt answer
 
 Use `--prompt answer` for trained checkpoints and `--prompt boxed` for
 untrained base models.
-
-## 📈 Main Results
-
-Four-benchmark average (percent) for the small pair, trained separately on
-open-r1 and MMR1:
-
-| Method | InternVL-2B, open-r1 | InternVL-2B, MMR1 | Qwen-VL-3B, open-r1 | Qwen-VL-3B, MMR1 |
-|---|---:|---:|---:|---:|
-| Base | 31.90 | 43.11 | 31.65 | 37.24 |
-| GT-Reward | 45.20 | 44.65 | 42.97 | 41.03 |
-| TTRL | 45.04 | 45.30 | 42.54 | 37.97 |
-| Co-learn (ours) | **45.40** | 45.15 | **43.89** | **41.12** |
-
-Full per-benchmark tables, including the 7B to 12B tier, are in the paper.
