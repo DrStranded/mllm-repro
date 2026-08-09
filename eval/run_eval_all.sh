@@ -7,7 +7,6 @@
 #        [--prompt answer|boxed] [--gpu 0] [--limit N] [--out_dir <dir>]
 set -euo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # repo root
-[ "${MLLM_ENV_READY:-0}" = "1" ] || source scripts/mllm_env.sh 2>/dev/null || true
 
 OUT_ROOT="${OUT_ROOT:-./data/mllm_eval}"
 MODEL="" TAG="" CSV="" PROMPT="answer" GPU="0" LIMIT="0" OUTDIR=""
