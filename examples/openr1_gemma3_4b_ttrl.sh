@@ -25,7 +25,7 @@ DATASET="lmms-lab/multimodal-open-r1-8k-verified"
 MODEL="google/gemma-3-4b-it"
 VLLM_MEM="${VLLM_MEM:-0.45}"
 TS="$(date +%Y%m%d_%H%M%S)"; RUN="openr1_gemma3_4b_ttrl_${TS}"
-BASE_OUT="work_dirs/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
+BASE_OUT="${MLLM_OUT_ROOT:-work_dirs}/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
 MAXSTEPS_ARG=""; [ -n "${MAX_STEPS:-}" ] && MAXSTEPS_ARG="--max_steps ${MAX_STEPS}"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launch \
     --config_file trainers/accelerate_zero3.yaml \
@@ -42,8 +42,9 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launc
     --use_vllm --vllm_mode colocate --vllm_max_model_length 4096 \
     --vllm_gpu_memory_utilization "$VLLM_MEM" --vllm_importance_sampling_mode token_truncate \
     --logging_steps 1 --save_strategy steps --save_steps ${SAVE_STEPS:-20} \
-    --save_only_model true --save_total_limit 3 \
-    --eval_strategy steps --eval_steps ${EVAL_STEPS:-20} \
+    --save_only_model true \
+    --save_total_limit 100 \
+    --eval_strategy steps --eval_steps ${EVAL_STEPS:-20} --eval_on_start true \
     --num_generations_eval 1 --per_device_eval_batch_size 1 \
     --adam_beta2 0.95 --beta 0 --loss_type bnpo --scale_rewards group \
     --self_labeling --self_consistency_threshold 0.0 \

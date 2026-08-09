@@ -26,7 +26,7 @@ DATASET="lmms-lab/multimodal-open-r1-8k-verified"
 MODEL_A="Qwen/Qwen2.5-VL-7B-Instruct"; MODEL_B="google/gemma-3-12b-it"
 VLLM_MEM_A="${VLLM_MEM:-0.45}"; VLLM_MEM_B="${VLLM_MEM:-0.45}"
 TS="$(date +%Y%m%d_%H%M%S)"; RUN="phase4_heter_qwen25vl7b_x_gemma3_12b_openr1_${TS}"
-BASE_OUT="work_dirs/mllm-co-grpo-dp/$RUN"; RDV_DIR="${BASE_OUT}/rdv"
+BASE_OUT="${MLLM_OUT_ROOT:-work_dirs}/mllm-co-grpo-dp/$RUN"; RDV_DIR="${BASE_OUT}/rdv"
 rm -rf "$RDV_DIR"; mkdir -p "$BASE_OUT/model_a" "$BASE_OUT/model_b" "$RDV_DIR"
 COMMON=(
     --learning_rate 1e-6 --per_device_train_batch_size ${BS:-2} --gradient_accumulation_steps ${GA:-8}

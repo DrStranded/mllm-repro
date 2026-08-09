@@ -55,6 +55,61 @@ def _safe_init_weights(self, module):
 _PreTrainedModel._init_weights = _safe_init_weights
 
 
+
+def _fix_vit_attn_backend_for_odd_head_dims():
+    """Stop vLLM handing Qwen2.5-VL's vision tower to a kernel that cannot run it.
+
+    vLLM 0.11.2 drops a flag. `Qwen2_5_VisionAttention.__init__` does
+
+        self.attn_backend, self.flash_attn_varlen_func = (
+            maybe_get_vit_flash_attn_backend(self.attn_backend, self.use_upstream_fa, ...))
+
+    but `maybe_get_vit_flash_attn_backend` returns only two values. On CUDA it
+    promotes XFORMERS -> FLASH_ATTN and sets `use_upstream_fa = True` *inside*
+    itself; the caller never receives that, and only the ROCm and XPU branches
+    below repair it. So the tower ends up with attn_backend=FLASH_ATTN and
+    use_upstream_fa=False, which routes it to vLLM's bundled FA2 -- built only
+    for head dims that are multiples of 32. Qwen2.5-VL's ViT is 1280/16 = 80:
+
+        RuntimeError: This flash attention build does not support headdim
+        not being a multiple of 32.
+
+    (An earlier version of this patched `get_vit_attn_backend` instead. That was
+    a no-op: measured on an A100, it already returns XFORMERS for head_size 80.
+    The promotion downstream is what undoes it.)
+
+    Fix: suppress the promotion. When the platform picked something other than
+    FLASH_ATTN, keep it -- the tower then uses the xformers wrapper, which has
+    no head-dim restriction. Backends that legitimately chose FLASH_ATTN (Gemma
+    and InternVL head dims are multiples of 32) fall through untouched.
+
+    Patched on `vllm.attention.layer` before vLLM imports any model, so the
+    `from ... import` in qwen2_5_vl.py binds the wrapped version.
+    """
+    from vllm.attention import layer as _layer
+    from vllm.attention.backends.registry import AttentionBackendEnum
+
+    _orig = _layer.maybe_get_vit_flash_attn_backend
+
+    def _patched(attn_backend, use_upstream_fa, attn_backend_override=None):
+        if attn_backend is not AttentionBackendEnum.FLASH_ATTN:
+            print(
+                f"[vit-attn-fix] keeping {attn_backend.name} for the vision tower "
+                "instead of promoting to FLASH_ATTN (vLLM would then use its "
+                "bundled FA2, which rejects head dims that are not multiples of 32)",
+                flush=True,
+            )
+            return attn_backend, None
+        return _orig(attn_backend, use_upstream_fa,
+                     attn_backend_override=attn_backend_override)
+
+    _layer.maybe_get_vit_flash_attn_backend = _patched
+
+
+if os.environ.get("MLLM_VIT_ATTN_FIX") == "1":
+    _fix_vit_attn_backend_for_odd_head_dims()
+
+
 from trl import (
     GRPOConfig,
     ModelConfig,
