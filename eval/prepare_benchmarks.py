@@ -7,6 +7,7 @@ Unified per-example schema (matches the project's `_load_local_eval_jsonl`):
 
 Splits follow MM-UPT (full test/testmini):
     MathVision 3040 | MathVista 1000 | MathVerse 3940 (5 versions) | We-Math 1740
+Plus CoreCognition (frame-combined, 1423): core-knowledge MCQ/yes-no probes.
 
 Output: <OUT_ROOT>/<bench>/{data.jsonl, images/}  (image path relative to data.jsonl).
 MathVista is already local; we just re-point to it.
@@ -15,7 +16,7 @@ Usage:
     python prepare_benchmarks.py <bench>      # bench = mathvision|mathverse|wemath|mathvista|all
     OUT_ROOT=/path python prepare_benchmarks.py all
 """
-import os, sys, json
+import os, re, sys, json
 
 OUT_ROOT = os.environ.get(
     "OUT_ROOT", "./data/mllm_eval"
@@ -141,7 +142,24 @@ def mathvista():
     print(f"mathvista: built full testmini from HF ({n} rows)")
 
 
-FNS = {"mathvision": mathvision, "mathverse": mathverse, "wemath": wemath, "mathvista": mathvista}
+def corecognition():
+    """CoreCognition frame-combined: 1423 rows, video samples pre-rendered as one
+    combined frame image. `prompt` already inlines the MCQ options; we strip the
+    leading <image> tag and the trailing answer-format instruction (our eval adds
+    its own). Yes/no golds stay as YES/NO (mathruler compares case-insensitively)."""
+    from datasets import load_dataset
+    ds = load_dataset("williamium/CoreCognition", "frame-combined", split="train")
+    def rows():
+        for ex in ds:
+            q = re.sub(r"^\s*<image>\s*", "", ex["prompt"])
+            q = re.sub(r"\n?Please answer with[^\n]*$", "", q.strip()).strip()
+            qtype = "mcq" if str(ex.get("question_type", "")).upper().startswith("MC") else "free"
+            yield ex["images"], q, ex["answer"], qtype
+    _write("corecognition", rows(), total=len(ds))
+
+
+FNS = {"mathvision": mathvision, "mathverse": mathverse, "wemath": wemath, "mathvista": mathvista,
+       "corecognition": corecognition}
 
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv) > 1 else "all"

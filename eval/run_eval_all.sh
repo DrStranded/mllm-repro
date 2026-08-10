@@ -33,8 +33,10 @@ declare -A DATA=(
   [mathverse]="$OUT_ROOT/mathverse/data.jsonl"
   [mathvista]="$OUT_ROOT/mathvista/testmini.jsonl"
   [wemath]="$OUT_ROOT/wemath/data.jsonl"
+  [corecognition]="$OUT_ROOT/corecognition/data.jsonl"
 )
-ORDER=(mathvision mathverse mathvista wemath)
+ORDER=(mathvision mathverse mathvista wemath corecognition)
+[ -n "${ONLY:-}" ] && ORDER=($ONLY)   # e.g. ONLY=corecognition for a single bench
 
 for b in "${ORDER[@]}"; do
   d="${DATA[$b]}"

@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Merge the 4 per-benchmark json outputs into one append-safe CSV row."""
+"""Merge the per-benchmark json outputs into one append-safe CSV row.
+
+The avg column averages the four math benchmarks only, so it stays comparable
+with the paper table; corecognition is reported as its own column."""
 import os, json, argparse, csv
 
-BENCHES = ["mathvision", "mathverse", "mathvista", "wemath"]
+BENCHES = ["mathvision", "mathverse", "mathvista", "wemath", "corecognition"]
+MATH4 = BENCHES[:4]  # avg stays over the four math benches (paper table)
 
 
 def main():
@@ -22,7 +26,7 @@ def main():
         if os.path.exists(p):
             a = json.load(open(p)).get("accuracy")
             row[b] = round(a * 100, 2) if a is not None else "NA"
-            if a is not None:
+            if a is not None and b in MATH4:
                 accs.append(a)
         else:
             row[b] = "NA"
