@@ -44,7 +44,8 @@ for b in "${ORDER[@]}"; do
   echo "==== [$b] ===="
   CUDA_VISIBLE_DEVICES="$GPU" python eval/eval_mllm.py \
     --model "$MODEL" --data "$d" --image_dir "$(dirname "$d")" \
-    --out "$OUTDIR/$b.json" --prompt "$PROMPT" --limit "$LIMIT" 2>&1 | tee -a "$OUTDIR/run.log"
+    --out "$OUTDIR/$b.json" --prompt "$PROMPT" --limit "$LIMIT" \
+    --max_tokens "${MAX_TOKENS:-16384}" 2>&1 | tee -a "$OUTDIR/run.log"
 done
 
 # aggregate 4 json -> 1 CSV row (append-safe)

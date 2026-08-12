@@ -44,7 +44,7 @@ def main():
     ap.add_argument("--prompt", choices=["answer", "boxed"], default="answer")
     ap.add_argument("--limit", type=int, default=0, help="first N examples (0=all)")
     ap.add_argument("--temperature", type=float, default=0.0)  # greedy: highest acc + reproducible (swept)
-    ap.add_argument("--max_tokens", type=int, default=4096)
+    ap.add_argument("--max_tokens", type=int, default=16384)
     ap.add_argument("--gpu_mem", type=float, default=0.85)
     ap.add_argument("--max_model_len", type=int, default=8192)
     ap.add_argument("--tp", type=int, default=1, help="tensor parallel size")
@@ -113,8 +113,7 @@ def main():
         ok = grade(pred, gold, q)
         n_extracted += pred is not None
         n_correct += ok
-        if len(samples) < 5:
-            samples.append({"gold": gold, "pred": pred, "ok": ok, "resp": resp[:300]})
+        samples.append({"gold": gold, "pred": pred, "ok": ok, "resp": resp})
 
     n = len(rows)
     res = {"model": args.model, "data": args.data, "prompt": args.prompt,

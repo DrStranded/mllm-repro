@@ -24,7 +24,8 @@ def main():
     for b in BENCHES:
         p = os.path.join(args.out_dir, f"{b}.json")
         if os.path.exists(p):
-            a = json.load(open(p)).get("accuracy")
+            j = json.load(open(p))
+            a = j.get("accuracy_judged", j.get("accuracy"))
             row[b] = round(a * 100, 2) if a is not None else "NA"
             if a is not None and b in MATH4:
                 accs.append(a)
