@@ -24,7 +24,7 @@ export MLLM_EVAL_IMAGE_DIR="${MLLM_EVAL_IMAGE_DIR:?set MLLM_EVAL_IMAGE_DIR = mat
 DATASET="lmms-lab/multimodal-open-r1-8k-verified"
 MODEL="OpenGVLab/InternVL3_5-8B-HF"
 TS="$(date +%Y%m%d_%H%M%S)"; RUN="openr1_internvl35_8b_ttrl_${TS}"
-BASE_OUT="work_dirs/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
+BASE_OUT="${MLLM_OUT_ROOT:-work_dirs}/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
 MAXSTEPS_ARG=""; [ -n "${MAX_STEPS:-}" ] && MAXSTEPS_ARG="--max_steps ${MAX_STEPS}"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launch \
     --config_file trainers/accelerate_zero3_offload.yaml \

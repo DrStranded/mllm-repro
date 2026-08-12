@@ -25,7 +25,7 @@ DATASET="lmms-lab/multimodal-open-r1-8k-verified"
 MODEL="OpenGVLab/InternVL3_5-2B-HF"
 VLLM_MEM="${VLLM_MEM:-0.45}"
 TS="$(date +%Y%m%d_%H%M%S)"; RUN="openr1_internvl35_2b_gt_${TS}"
-BASE_OUT="work_dirs/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
+BASE_OUT="${MLLM_OUT_ROOT:-work_dirs}/mllm-co-grpo-dp/$RUN"; mkdir -p "$BASE_OUT"
 MAXSTEPS_ARG=""; [ -n "${MAX_STEPS:-}" ] && MAXSTEPS_ARG="--max_steps ${MAX_STEPS}"
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launch \
     --config_file trainers/accelerate_zero3.yaml \
