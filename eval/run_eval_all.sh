@@ -51,7 +51,7 @@ sys.exit(0 if o.get('n',0)>0 and len(o.get('samples',[]))==o['n'] else 1)" 2>/de
   CUDA_VISIBLE_DEVICES="$GPU" python eval/eval_mllm.py \
     --model "$MODEL" --data "$d" --image_dir "$(dirname "$d")" \
     --out "$OUTDIR/$b.json" --prompt "$PROMPT" --limit "$LIMIT" \
-    --max_tokens "${MAX_TOKENS:-16384}" 2>&1 | tee -a "$OUTDIR/run.log"
+    --max_tokens "${MAX_TOKENS:-16384}" --max_model_len "${MAX_MODEL_LEN:-24576}" 2>&1 | tee -a "$OUTDIR/run.log"
 done
 
 # aggregate 4 json -> 1 CSV row (append-safe)
