@@ -3,7 +3,9 @@
 
 MM-UPT scores benchmarks with an LLM judge (Qwen2.5-32B-Instruct, paper §4.1),
 not pure rules. This script adds that layer on top of our rule-based pass:
-every sample the rules did NOT credit (ok=false) is re-judged by the model;
+samples that followed the answer format but failed rule matching are re-judged
+(equivalent forms: 3/2 vs 1.5, option letter vs value); samples with NO
+recognized answer format stay wrong - format compliance is part of the task;
 rule-credited samples are left alone, so the judge can only recover
 false negatives (missed extractions, equivalent-but-differently-written
 answers), never inflate.
@@ -67,6 +69,11 @@ def main():
         for si, s in enumerate(o["samples"]):
             if s["ok"]:
                 s["ok_judged"] = True
+                continue
+            if s.get("pred") is None:
+                # No recognized answer format (<answer> tag or \boxed{}): counts as
+                # wrong, full stop. Format compliance is part of the task.
+                s["ok_judged"] = False
                 continue
             q = qs[si] if qs else ""
             resp = s["resp"][-args.max_resp_chars:]
