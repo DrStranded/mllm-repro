@@ -84,8 +84,13 @@ def main():
         from vllm import LLM, SamplingParams
         from transformers import AutoTokenizer
         tok = AutoTokenizer.from_pretrained(args.judge)
-        llm = LLM(model=args.judge, dtype="bfloat16", tensor_parallel_size=args.tp,
-                  gpu_memory_utilization=0.92, max_model_len=8192)
+        def _build(eager):
+            return LLM(model=args.judge, dtype="bfloat16", tensor_parallel_size=args.tp,
+                       gpu_memory_utilization=0.92, max_model_len=8192, enforce_eager=eager)
+        try:
+            llm = _build(False)
+        except Exception:
+            llm = _build(True)
         prompts = [tok.apply_chat_template([{"role": "user", "content": p}],
                                            tokenize=False, add_generation_prompt=True)
                    for _, _, p in todo]
