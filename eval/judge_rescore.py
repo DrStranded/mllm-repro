@@ -85,7 +85,7 @@ def main():
         from transformers import AutoTokenizer
         tok = AutoTokenizer.from_pretrained(args.judge)
         llm = LLM(model=args.judge, dtype="bfloat16", tensor_parallel_size=args.tp,
-                  gpu_memory_utilization=0.92, max_model_len=8192, enforce_eager=True)
+                  gpu_memory_utilization=0.92, max_model_len=8192)
         prompts = [tok.apply_chat_template([{"role": "user", "content": p}],
                                            tokenize=False, add_generation_prompt=True)
                    for _, _, p in todo]

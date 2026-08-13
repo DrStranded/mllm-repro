@@ -45,7 +45,7 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="first N examples (0=all)")
     ap.add_argument("--temperature", type=float, default=0.0)  # greedy: highest acc + reproducible (swept)
     ap.add_argument("--max_tokens", type=int, default=16384)
-    ap.add_argument("--gpu_mem", type=float, default=0.85)
+    ap.add_argument("--gpu_mem", type=float, default=0.92)
     ap.add_argument("--max_model_len", type=int, default=8192)
     ap.add_argument("--tp", type=int, default=1, help="tensor parallel size")
     args = ap.parse_args()
@@ -84,8 +84,7 @@ def main():
 
     llm = LLM(model=args.model, dtype="bfloat16", trust_remote_code=True,
               gpu_memory_utilization=args.gpu_mem, max_model_len=args.max_model_len,
-              limit_mm_per_prompt={"image": 1}, tensor_parallel_size=args.tp,
-              enforce_eager=True)
+              limit_mm_per_prompt={"image": 1}, tensor_parallel_size=args.tp)
     sp = SamplingParams(temperature=args.temperature, top_p=0.95,
                         max_tokens=args.max_tokens, seed=0)
 
