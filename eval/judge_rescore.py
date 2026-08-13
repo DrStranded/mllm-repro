@@ -37,6 +37,10 @@ Model response (may contain reasoning; judge only its FINAL answer):
 Does the model's final answer match the reference answer? For multiple choice,
 the option letter or the option's value both count. For yes/no questions,
 judge the stated yes/no. Numeric answers count if mathematically equal.
+
+Strict rule: the response must explicitly COMMIT to a final answer. If it is
+cut off mid-reasoning, trails off, or never clearly states a final answer,
+reply Incorrect even if the partial work points toward the correct value.
 Reply with exactly one word: Correct or Incorrect."""
 
 
