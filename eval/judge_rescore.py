@@ -60,8 +60,14 @@ def main():
     for fi, path in enumerate(args.files):
         o = json.load(open(path))
         data_root = os.path.dirname(os.path.abspath(o["data"]))
-        qs = [json.loads(l)["problem"] for l in open(o["data"])] \
-            if os.path.exists(o["data"]) else None
+        dpath = o["data"]
+        if not os.path.exists(dpath):
+            # cross-cluster jsons carry foreign paths; remap via local eval root
+            bench = os.path.basename(path)[:-5]
+            local = os.path.join(os.environ.get("EVAL_DATA_ROOT", ""), bench,
+                                 "testmini.jsonl" if bench == "mathvista" else "data.jsonl")
+            dpath = local if os.path.exists(local) else None
+        qs = [json.loads(l)["problem"] for l in open(dpath)] if dpath else None
         metas.append(o)
         if len(o.get("samples", [])) != o.get("n"):
             sys.exit(f"{path}: samples truncated ({len(o.get('samples', []))} of "
