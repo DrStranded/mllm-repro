@@ -83,9 +83,14 @@ def main():
     use_system = args.prompt == "boxed"
 
     def _build(eager):
+        # mm_encoder_attn_backend: vLLM's bundled FA2 kernel rejects a ViT head_dim that
+        # is not a multiple of 32 (Qwen2.5-VL ViT = 80). Pinning SDPA for the vision
+        # encoder keeps that path off FA2; head_dim%32==0 ViTs (InternVL=128) are
+        # unaffected because they never needed the upgrade in the first place.
         return LLM(model=args.model, dtype="bfloat16", trust_remote_code=True,
                    gpu_memory_utilization=args.gpu_mem, max_model_len=args.max_model_len,
                    limit_mm_per_prompt={"image": 1}, tensor_parallel_size=args.tp,
+                   mm_encoder_attn_backend="TORCH_SDPA",
                    enforce_eager=eager)
     try:
         llm = _build(False)   # CUDA graphs on: ~1.4x decode throughput

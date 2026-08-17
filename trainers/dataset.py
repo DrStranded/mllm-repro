@@ -277,7 +277,18 @@ def load_dataset(dataset_name):
     pre_dir = os.environ.get("MLLM_PRE_DIR")
     if pre_dir:
         from datasets import load_from_disk
+        # Provenance: MLLM_PRE_DIR silently overrides `dataset_name`, so the run's
+        # name, banner and output_dir can all disagree with what was really trained
+        # on. Log the resolved path + row count (the only signal that cannot lie),
+        # and let callers pin the expected corpus via MLLM_PRE_REQUIRE.
+        require = os.environ.get("MLLM_PRE_REQUIRE")
+        if require and require not in pre_dir:
+            raise SystemExit(
+                f"[run] FATAL: MLLM_PRE_DIR={pre_dir} does not contain "
+                f"MLLM_PRE_REQUIRE={require!r} - refusing to train on the wrong corpus"
+            )
         train_dataset = load_from_disk(pre_dir)
+        print(f"[run] train set: {pre_dir} rows={len(train_dataset)}", flush=True)
         eval_path = os.environ.get("MLLM_EVAL_PATH")
         if eval_path is not None:
             eval_dataset = _load_local_eval_jsonl(eval_path, os.environ.get("MLLM_EVAL_IMAGE_DIR"))

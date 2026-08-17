@@ -24,8 +24,8 @@ python tools/verify.py    # asserts the stack matches the paper runs
 Or install directly: `pip install -r requirements.txt` on Python 3.11 with
 CUDA 12.8. The freeze is a full pip freeze of the
 environment behind the paper numbers (torch 2.9.0+cu128, vllm 0.11.2,
-transformers 4.57.0, flash-attn 2.8.3, patched TRL). Export
-`MLLM_VIT_ATTN_FIX=1` for every Qwen2.5-VL run.
+transformers 4.57.0, flash-attn 2.8.3, patched TRL). Export `MLLM_VIT_ATTN_FIX=1` for every Qwen2.5-VL **training** run (the
+trainers read it; `eval_mllm.py` does not).
 
 Prepare models and data once:
 
@@ -74,5 +74,15 @@ python eval/prepare_benchmarks.py all
 bash eval/run_eval_all.sh --model [checkpoint] --prompt answer
 ```
 
-Use `--prompt answer` for trained checkpoints and `--prompt boxed` for
-untrained base models.
+Use `--prompt boxed` for the whole table so cells stay comparable, and always
+export `VLLM_WORKER_MULTIPROC_METHOD=spawn` — vLLM runs its engine in a child
+process and CUDA is not fork-safe, so the default `fork` makes the child die
+with "CUDA driver initialization failed".
+
+Single-GPU deployment (incl. Blackwell / sm_120 notes and the frozen protocol):
+see [`SINGLE_GPU_EVAL.md`](SINGLE_GPU_EVAL.md). To score the whole big-tier
+Qwen column on one card:
+
+```bash
+CUDA_VISIBLE_DEVICES=2 bash eval/run_bigtier_qwen.sh --out_root work_dirs/eval_bigtier
+```

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# open_r1 · internvl35_8b · OpenGVLab/InternVL3_5-8B-HF · gt(stock GRPO) · stack B (torch2.9/vllm0.11.2/tf4.57.0/ds0.18), ZeRO-3+optim-offload.
+# HP identical to the source big7b8b launcher; only NAS activation / hardcoded secrets / wandb-online removed.
+# Requires the mllm-repro env active + MLLM_ENV_READY=1. bs/ga/vllm/steps overridable via env.
+# smoke: MAX_STEPS=1 MAX_SAMPLES=64 bash examples/openr1_internvl35_8b_gt.sh
+set -euo pipefail
+[ "${MLLM_ENV_READY:-0}" = "1" ] || { echo "[mllm-repro] ERROR: env not activated. Enter the image/conda env and 'export MLLM_ENV_READY=1' (see README)." >&2; exit 1; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"; cd "$REPO_ROOT"
+# HF cache: local, overridable, no NAS default.
+export HF_HUB_CACHE="${HF_HUB_CACHE:-$HOME/.cache/huggingface/hub}"; mkdir -p "$HF_HUB_CACHE"
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HOME/.cache/huggingface/datasets}"; mkdir -p "$HF_DATASETS_CACHE"
+# wandb: OFFLINE by default (no API key needed); `wandb sync <dir>` later to upload. We keep `--report_to wandb`
+# below so metrics land in a local offline run dir; to disable tracking entirely, change it to `--report_to none`.
+export WANDB_MODE="${WANDB_MODE:-offline}"
+export WANDB_PROJECT="${WANDB_PROJECT:-mllm-co-grpo-dp}"
+export DISABLE_MLFLOW_INTEGRATION=TRUE
+# HF token: required (hf read-scope token; Gemma models also need license acceptance on their HF page).
+export HF_TOKEN="${HF_TOKEN:?set HF_TOKEN (hf read-scope token; Gemma needs license acceptance)}"; export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
+# Data/eval paths: required, no NAS default (see setup/prepare_data.sh + bundled data/mathvista).
+export MAX_SAMPLES="${MAX_SAMPLES:-8000}"
+export MLLM_PRE_DIR="${MLLM_PRE_DIR:?set MLLM_PRE_DIR = preprocessed open_r1_8k dir (see setup/prepare_data.sh)}"
+export MLLM_EVAL_PATH="${MLLM_EVAL_PATH:?set MLLM_EVAL_PATH = mathvista/testmini_150.jsonl (bundled under data/mathvista)}"
+export MLLM_EVAL_IMAGE_DIR="${MLLM_EVAL_IMAGE_DIR:?set MLLM_EVAL_IMAGE_DIR = mathvista image root (data/mathvista)}"
+DATASET="MMR1/MMR1-Math-RL-Data-v0"
+MODEL="OpenGVLab/InternVL3_5-8B-HF"
+source "$REPO_ROOT/orchestration/_auto_resume.sh"
+ar_find_run "mmr1_internvl35_8b_gt_mmupt"
+RUN="mmr1_internvl35_8b_gt_mmupt"    # 一个实验一个固定目录,不带时间戳
+BASE_OUT="${MLLM_WORKDIR_ROOT:-work_dirs}/mllm-co-grpo-dp/$RUN"
+mkdir -p "$BASE_OUT"
+ar_resume_arg "$BASE_OUT"
+MAXSTEPS_ARG=""; [ -n "${MAX_STEPS:-}" ] && MAXSTEPS_ARG="--max_steps ${MAX_STEPS}"
+CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3,4,5,6,7}" accelerate launch \
+    --config_file trainers/accelerate_zero3_offload.yaml \
+    --num_processes ${NPROC:-8} --main_process_port 19495 --gradient_accumulation_steps ${GA:-5} \
+    trainers/train_mllm_single.py \
+    --model_name_or_path "$MODEL" --train_dataset "$DATASET" \
+    --output_dir "$BASE_OUT" --run_config "$RUN" \
+    --learning_rate 1e-6 --weight_decay 0.01 --max_grad_norm 1.0 \
+    --per_device_train_batch_size ${BS:-3} --gradient_accumulation_steps ${GA:-5} \
+    --num_train_epochs 1 ${MAXSTEPS_ARG} \
+    --lr_scheduler_type cosine_with_min_lr --lr_scheduler_kwargs '{"min_lr_rate": 0.1}' --warmup_ratio 0.0 \
+    --gradient_checkpointing --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
+    --max_completion_length 2048 --num_generations 10 --temperature 0.7 \
+    --use_vllm --vllm_mode colocate --vllm_max_model_length 4096 \
+    --vllm_gpu_memory_utilization ${VLLM_MEM:-0.45} --vllm_importance_sampling_mode token_truncate \
+    --logging_steps 1 --save_strategy steps --save_steps ${SAVE_STEPS:-20} \
+    --save_only_model ${SAVE_ONLY_MODEL:-false} \
+    --save_total_limit ${SAVE_LIMIT:-999} \
+    --eval_strategy steps --eval_steps ${EVAL_STEPS:-20} --eval_on_start true \
+    --num_generations_eval 1 --per_device_eval_batch_size 1 \
+    --adam_beta2 0.95 --beta 0.01 --loss_type bnpo --scale_rewards group \
+    --seed 42 --data_seed 42 --report_to wandb --wandb_project mllm-co-grpo-dp \
+    --attn_implementation sdpa --trust_remote_code --bf16 true \
+    ${AR_ARG[@]+"${AR_ARG[@]}"} 2>&1 | tee -a "$BASE_OUT/train.log"
