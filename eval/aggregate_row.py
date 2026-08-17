@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Merge the per-benchmark json outputs into one append-safe CSV row.
 
-The avg column averages the four math benchmarks only, so it stays comparable
-with the paper table; corecognition is reported as its own column."""
+Frozen protocol (2026-08-17): the avg column is AVG5 over all five benchmarks,
+and the score is the RULE-BASED accuracy. `accuracy_judged`, if a file still
+carries it from an older run, is deliberately ignored — the judge over-credits
+long rambling responses (it reads only the tail and credits a correct value
+that appears mid-stream), which inflates verbose models by several points."""
 import os, json, argparse, csv
 
 BENCHES = ["mathvision", "mathverse", "mathvista", "wemath", "corecognition"]
-MATH4 = BENCHES[:4]  # avg stays over the four math benches (paper table)
 
 
 def main():
@@ -25,13 +27,15 @@ def main():
         p = os.path.join(args.out_dir, f"{b}.json")
         if os.path.exists(p):
             j = json.load(open(p))
-            a = j.get("accuracy_judged", j.get("accuracy"))
+            a = j.get("accuracy")          # rule-based only, never accuracy_judged
             row[b] = round(a * 100, 2) if a is not None else "NA"
-            if a is not None and b in MATH4:
+            if a is not None:
                 accs.append(a)
         else:
             row[b] = "NA"
-    row["avg"] = round(sum(accs) / len(accs) * 100, 2) if accs else "NA"
+    # AVG5: only report it when all five benchmarks are present, so a partial
+    # run can never be mistaken for a complete cell.
+    row["avg"] = round(sum(accs) / len(BENCHES) * 100, 2) if len(accs) == len(BENCHES) else "NA"
 
     cols = ["tag", "model"] + BENCHES + ["avg"]
     os.makedirs(os.path.dirname(os.path.abspath(args.csv)), exist_ok=True)

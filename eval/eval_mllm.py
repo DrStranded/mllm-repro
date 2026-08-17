@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Run one MLLM checkpoint on one benchmark (jsonl+images) → accuracy json.
 
-Inference: vLLM multimodal (Qwen2.5-VL / InternVL3.5 / Gemma3), borrowing
-MM-UPT's eval recipe (boxed prompt option, T=0.2). Grading: grade.py (mathruler
-rule-based + <answer>/boxed extraction + MCQ letter fallback). No LLM judge.
+Inference: vLLM multimodal (Qwen2.5-VL / InternVL3.5 / Gemma3), following
+MM-UPT's eval recipe except for the decoding temperature: we use T=0 (greedy)
+for reproducibility, where MM-UPT samples at T=0.2.  Grading: grade.py
+(mathruler rule-based + <answer>/boxed extraction + MCQ letter/value mapping).
+No LLM judge.
+
+Frozen protocol (2026-08-17): T=0 - max_tokens 16384 - max_model_len 24576 -
+prompt boxed for every cell - rule-based grading - 5 benchmarks, AVG5.
 
 Prompt style:
   --prompt answer : R1-V format our models were trained on (<think>/<answer>), no system role
@@ -11,7 +16,7 @@ Prompt style:
 
 Usage:
   python eval_mllm.py --model <ckpt> --data <bench>/data.jsonl --out out.json \
-      [--image_dir <dir>] [--prompt answer|boxed] [--limit N] [--temperature 0.2]
+      [--image_dir <dir>] [--prompt answer|boxed] [--limit N] [--temperature 0.0]
 """
 import os, sys, json, argparse, time
 
@@ -46,7 +51,7 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.0)  # greedy: highest acc + reproducible (swept)
     ap.add_argument("--max_tokens", type=int, default=16384)
     ap.add_argument("--gpu_mem", type=float, default=0.92)
-    ap.add_argument("--max_model_len", type=int, default=8192)
+    ap.add_argument("--max_model_len", type=int, default=24576)  # keep 16k of max_tokens a REAL budget
     ap.add_argument("--tp", type=int, default=1, help="tensor parallel size")
     args = ap.parse_args()
 
