@@ -49,8 +49,10 @@ the question.
 Two-sided validation against the paper, both measured with this exact pipeline:
 
 - **Their flagship row reproduces.** Official ckpt `WaltonFuture/Qwen2.5-VL-7B-MM-UPT-MMR1`
-  scored here: 27.43 / 45.51 / 73.20 / 70.06 = **AVG4 54.05** vs their printed 53.17
-  (**+0.88**, every bench within +1.4).
+  scored here: 27.93 / 45.10 / 72.30 / 70.00 = **AVG4 53.83** vs their printed 53.17
+  (**+0.66**). An earlier measurement of this same ckpt at top_p=0.95 gave 54.05, so
+  the top_p knob alone is worth −0.22 — small, but the anchor must be measured under
+  the exact protocol, and the 53.83 figure is the one to quote.
 - **Their base row does not fully close.** Our base measurement lands **+1.86** above
   their printed 49.47, uniform across all four benches (+1.61 … +2.17), surviving the
   temperature and top_p alignment. Attribution: unpublished harness components (judge
@@ -62,18 +64,40 @@ sides (our measurement of their checkpoint vs our measurement of ours). Comparin
 measured numbers against their *printed* numbers inherits a ~+1.9 tailwind and is
 forbidden in tables; printed numbers may be quoted in prose with the protocol caveat.
 
-## Verified working example (2026-08-24)
+## Cells measured under this protocol (2026-08-24)
 
-| cell (all self-measured, this protocol) | AVG4 |
-|---|---|
-| Qwen2.5-VL-7B base | 51.33 |
-| MM-UPT official ckpt (15 epochs) | 54.05 |
-| co-RL Qwen×InternVL-8B, beta=0, endpoint (1 epoch) | 53.47 |
+All rows below are self-measured with this exact pipeline, Qwen2.5-VL-7B side, and
+are therefore mutually comparable. Every co-RL row is the Qwen-side weight — a single
+model at inference; the peer only supplies training signal.
+
+| cell | MathVision | MathVerse | MathVista | We-Math | AVG4 |
+|---|---|---|---|---|---|
+| Qwen2.5-VL-7B base | 27.04 | 45.58 | 68.20 | 64.48 | 51.33 |
+| MM-UPT official ckpt (15 ep × n=10) | 27.93 | 45.10 | 72.30 | 70.00 | **53.83** |
+| co-RL ×InternVL-8B, beta=0, endpoint | 28.16 | 46.24 | 71.20 | 68.28 | **53.47** |
+| co-RL ×Gemma-12B, mmupt recipe | 27.63 | 46.37 | 70.70 | 66.32 | 52.76 |
+| GT-GRPO (ground-truth reward, beta=0) | 28.09 | 47.31 | 66.90 | 68.62 | 52.73 |
+| co-RL ×InternVL-8B, mmupt recipe | 27.76 | 46.95 | 67.90 | 67.82 | 52.61 |
+| TTRL (majority-vote self-reward, beta=0) | 27.53 | 43.55 | 69.50 | 65.80 | 51.60 |
+| co-RL ×InternVL-8B, beta=0, best-by-val (s580) | 26.64 | 44.95 | 67.40 | 64.89 | 50.97 |
+
+Reading the table:
+
+- co-RL at 1 epoch lands 0.36 under MM-UPT's 15-epoch official ckpt — inside the noise
+  floor (two full sweeps of adjacent steps of one model differ by 0.20 AVG, up to
+  ±0.91 on a single bench).
+- co-RL (unsupervised) **beats GT-GRPO** (supervised, +0.74) and beats TTRL by +1.87,
+  while TTRL clears base by only 0.27. Same base, data, recipe and budget across those
+  three; the only difference is where the reward comes from.
+- beta=0 co-RL (53.47) > both mmupt-recipe co-RL cells (52.76 / 52.61): the mmupt
+  recipe's KL penalty (`--beta 0.01`) acts as a leveler, compressing methods toward base.
+- best-by-val selection costs 2.50 AVG4 versus the endpoint on the same run. Report
+  endpoints.
 
 Training-budget note for the comparison narrative: MM-UPT runs 15 epochs × rollout
-n=10 (their `examples/config.yaml`); the co-RL row is 1 epoch × 8 rollouts — roughly
-1/10 of the generation budget counting both co-trained models, ~1/23 counting only
-the published side.
+n=10 (their `examples/config.yaml`); the beta=0 co-RL row is 1 epoch × 8 rollouts —
+roughly 1/10 of the generation budget counting both co-trained models, ~1/23 counting
+only the published side.
 
 Raw per-item outputs for every cell live in `work_dirs/eval_bigtier/<tag>/<bench>.json`
 (git-ignored; archived to a private HF dataset for audit).
