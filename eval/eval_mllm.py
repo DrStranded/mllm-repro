@@ -49,6 +49,7 @@ def main():
     ap.add_argument("--prompt", choices=["answer", "boxed"], default="answer")
     ap.add_argument("--limit", type=int, default=0, help="first N examples (0=all)")
     ap.add_argument("--temperature", type=float, default=0.0)  # greedy: highest acc + reproducible (swept)
+    ap.add_argument("--top_p", type=float, default=0.95)  # MM-UPT alignment runs need 1.0 (their SamplingParams leaves vLLM default)
     ap.add_argument("--max_tokens", type=int, default=16384)
     ap.add_argument("--gpu_mem", type=float, default=0.92)
     ap.add_argument("--max_model_len", type=int, default=24576)  # keep 16k of max_tokens a REAL budget
@@ -102,7 +103,7 @@ def main():
     except Exception as e:
         print(f"[eval] cudagraph engine failed ({type(e).__name__}), falling back to eager", flush=True)
         llm = _build(True)
-    sp = SamplingParams(temperature=args.temperature, top_p=0.95,
+    sp = SamplingParams(temperature=args.temperature, top_p=args.top_p,
                         max_tokens=args.max_tokens, seed=0)
 
     # Build vLLM inputs (prompt text via chat template + PIL via multi_modal_data).

@@ -14,7 +14,13 @@ set -euo pipefail
 
 OUT_ROOT="${OUT_ROOT:-work_dirs/eval_bigtier}"
 GT_CKPT="${GT_CKPT:-}"          # local path or HF id of the mmupt-retrained GT
-LIMIT="${LIMIT:-0}"             # 0 = full benchmarks; set small for a smoke
+LIMIT="${LIMIT:-0}"            # 0 = full benchmarks; set small for a smoke
+# CUDA_VISIBLE_DEVICES does NOT nest: run_eval_all.sh re-exports it for the python
+# process, and that child resolves the value against PHYSICAL devices, not against
+# the parent's already-filtered view. Hardcoding --gpu 0 here therefore sent the
+# engine to physical GPU0 no matter what the caller set, which on a shared box
+# means landing on someone else's card. Default to whatever the caller selected.
+GPU="${GPU:-${CUDA_VISIBLE_DEVICES:-0}}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --out_root) OUT_ROOT="$2"; shift 2;;
@@ -39,7 +45,10 @@ declare -a CELLS=(
 [ -n "$GT_CKPT" ] && CELLS+=("gt-q7b-mmupt|$GT_CKPT")
 
 echo "[bigtier] $(date --iso-8601=seconds)  out_root=$OUT_ROOT  cells=${#CELLS[@]}"
-nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader | head -2
+# `| head -2` closes the pipe early, and on a box with more GPUs than that
+# nvidia-smi then dies of SIGPIPE (141), which `set -o pipefail -e` turns into an
+# immediate exit before the first cell ever runs. Only shows up with >2 GPUs.
+nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader | head -2 || true
 
 for spec in "${CELLS[@]}"; do
   TAG="${spec%%|*}"; MODEL="${spec#*|}"
@@ -48,7 +57,7 @@ for spec in "${CELLS[@]}"; do
   # every cell uses boxed: the whole table is scored under one prompt so the
   # cells stay comparable (see doc: eval prompt confound).
   LIMIT="$LIMIT" bash eval/run_eval_all.sh \
-      --model "$MODEL" --tag "$TAG" --prompt boxed --gpu 0 \
+      --model "$MODEL" --tag "$TAG" --prompt boxed --gpu "$GPU" \
       --limit "$LIMIT" --out_dir "$OUT" || { echo "[bigtier] $TAG FAILED"; continue; }
   echo "[bigtier] $TAG done  $(date --iso-8601=seconds)"
 done
