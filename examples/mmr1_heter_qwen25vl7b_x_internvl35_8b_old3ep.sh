@@ -26,34 +26,40 @@ export MLLM_EVAL_IMAGE_DIR="${MLLM_EVAL_IMAGE_DIR:?set MLLM_EVAL_IMAGE_DIR = mat
 DATASET="MMR1/MMR1-Math-RL-Data-v0"
 MODEL_A="Qwen/Qwen2.5-VL-7B-Instruct"; MODEL_B="OpenGVLab/InternVL3_5-8B-HF"
 VLLM_MEM_A="${VLLM_MEM:-0.35}"; VLLM_MEM_B="${VLLM_MEM:-0.35}"
-RUN="mmr1_heter_qwen25vl7b_x_internvl35_8b_b128"
+RUN="${RUN:-mmr1_heter_q7bxi8b_old3ep}"
 BASE_OUT="${OUT_ROOT:-work_dirs}/mllm-co-grpo-dp/$RUN"; RDV_DIR="${BASE_OUT}/rdv"
 rm -rf "$RDV_DIR"; mkdir -p "$BASE_OUT/model_a" "$BASE_OUT/model_b" "$RDV_DIR"
 COMMON=(
-    --learning_rate 1e-6 --per_device_train_batch_size ${BS:-1} --gradient_accumulation_steps ${GA:-320}
-    --train_dataset "$DATASET" --num_train_epochs 15
+    --learning_rate 1e-6 --per_device_train_batch_size ${BS:-8} --gradient_accumulation_steps ${GA:-4}
+    --train_dataset "$DATASET" --num_train_epochs 3
     --lr_scheduler_type cosine_with_min_lr --lr_scheduler_kwargs '{"min_lr_rate": 0.1}' --warmup_ratio 0.03
     --gradient_checkpointing --gradient_checkpointing_kwargs '{"use_reentrant": false}'
-    --max_completion_length 2048 --num_generations 10 --temperature 0.7
+    --max_completion_length 1024 --num_generations 8 --temperature 1.0
     --use_vllm --vllm_mode colocate --vllm_max_model_length 4096 --vllm_importance_sampling_mode token_truncate
-    --logging_steps 1 --save_strategy steps --save_steps ${SAVE_STEPS:-10} --save_only_model false --save_total_limit ${SAVE_LIMIT:-3}
-    --eval_strategy steps --eval_steps ${EVAL_STEPS:-50} --eval_on_start true
+    --logging_steps 1 --save_strategy steps --save_steps ${SAVE_STEPS:-20} --save_only_model false --save_total_limit ${SAVE_LIMIT:-99}
+    --eval_strategy steps --eval_steps ${EVAL_STEPS:-361} --eval_on_start ${EVAL_ON_START:-false}
     --num_generations_eval 1 --per_device_eval_batch_size 1
-    --adam_beta2 0.95 --beta 0.01 --loss_type bnpo --scale_rewards group --self_consistency_threshold 0.0
+    --adam_beta2 0.95 --beta 0 --loss_type bnpo --scale_rewards group --self_consistency_threshold 0.0
     --seed 42 --data_seed 42 --report_to wandb --wandb_project mllm-co-grpo-dp
     --rendezvous_dir "$RDV_DIR" --run_config "$RUN" --bf16 true --trust_remote_code
 )
-COMMON+=(--max_steps "${MAX_STEPS:-90}")   # 90 步 = 2 epoch 评估点;续跑时调大
+[ -n "${MAX_STEPS:-}" ] && COMMON+=(--max_steps "$MAX_STEPS")
 launch_group () {
     local grp="$1" gpus="$2" my="$3" peer="$4" port="$5" out="$6" mem="$7" attn="$8"
     CUDA_VISIBLE_DEVICES="$gpus" accelerate launch --config_file trainers/accelerate_zero3.yaml \
-        --num_processes 4 --main_process_port "$port" --gradient_accumulation_steps ${GA:-320} \
+        --num_processes ${NPROC:-2} --main_process_port "$port" --gradient_accumulation_steps ${GA:-4} \
         trainers/train_mllm_co_grpo_dp.py --group "$grp" \
         --model_name_or_path "$my" --peer_model_name_or_path "$peer" \
         --output_dir "$out" --vllm_gpu_memory_utilization "$mem" --attn_implementation "$attn" \
         "${COMMON[@]}" 2>&1 | tee -a "$out/train.log"
 }
-launch_group A "0,1,2,3" "$MODEL_A" "$MODEL_B" 19470 "$BASE_OUT/model_a" "$VLLM_MEM_A" "flash_attention_2" & PID_A=$!
-launch_group B "4,5,6,7" "$MODEL_B" "$MODEL_A" 19471 "$BASE_OUT/model_b" "$VLLM_MEM_B" "flash_attention_2" & PID_B=$!
+# ONLY_GROUP=A|B 时只起一组(双节点模式:每节点各跑一组,rendezvous 走共享盘)
+if [ "${ONLY_GROUP:-}" = "A" ]; then
+    launch_group A "${GPUS_A:-0,1}" "$MODEL_A" "$MODEL_B" 19470 "$BASE_OUT/model_a" "$VLLM_MEM_A" "${ATTN_IMPL:-flash_attention_2}"; exit $?
+elif [ "${ONLY_GROUP:-}" = "B" ]; then
+    launch_group B "${GPUS_B:-2,3}" "$MODEL_B" "$MODEL_A" 19471 "$BASE_OUT/model_b" "$VLLM_MEM_B" "${ATTN_IMPL:-flash_attention_2}"; exit $?
+fi
+launch_group A "${GPUS_A:-0,1}" "$MODEL_A" "$MODEL_B" 19470 "$BASE_OUT/model_a" "$VLLM_MEM_A" "${ATTN_IMPL:-flash_attention_2}" & PID_A=$!
+launch_group B "${GPUS_B:-2,3}" "$MODEL_B" "$MODEL_A" 19471 "$BASE_OUT/model_b" "$VLLM_MEM_B" "${ATTN_IMPL:-flash_attention_2}" & PID_B=$!
 cleanup() { kill "$PID_A" "$PID_B" 2>/dev/null || true; }; trap cleanup EXIT INT TERM
 wait -n "$PID_A" "$PID_B"; EC=$?; cleanup; wait 2>/dev/null || true; exit "$EC"
