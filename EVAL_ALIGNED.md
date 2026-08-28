@@ -74,6 +74,8 @@ model at inference; the peer only supplies training signal.
 |---|---|---|---|---|---|
 | Qwen2.5-VL-7B base | 27.04 | 45.58 | 68.20 | 64.48 | 51.33 |
 | MM-UPT official ckpt (15 ep × n=10) | 27.93 | 45.10 | 72.30 | 70.00 | **53.83** |
+| co-RL old3ep-b16 ×InternVL-8B, best (s700, 3 ep) | 28.06 | 48.68 | 73.30 | 70.80 | **55.21** |
+| co-RL old3ep-b16 ×InternVL-8B, endpoint (3 ep) | 28.75 | 48.40 | 72.40 | 69.89 | **54.86** |
 | co-RL ×InternVL-8B, beta=0, endpoint | 28.16 | 46.24 | 71.20 | 68.28 | **53.47** |
 | co-RL ×Gemma-12B, mmupt recipe | 27.63 | 46.37 | 70.70 | 66.32 | 52.76 |
 | GT-GRPO (ground-truth reward, beta=0) | 28.09 | 47.31 | 66.90 | 68.62 | 52.73 |
@@ -83,6 +85,9 @@ model at inference; the peer only supplies training signal.
 
 Reading the table:
 
+- **The old3ep-b16 run beats the official checkpoint at both selection points**
+  (+1.38 / +1.03), with MathVerse 48.68 the highest cell in the project: three
+  epochs of the beta=0 recipe close and reverse the remaining gap.
 - co-RL at 1 epoch lands 0.36 under MM-UPT's 15-epoch official ckpt — inside the noise
   floor (two full sweeps of adjacent steps of one model differ by 0.20 AVG, up to
   ±0.91 on a single bench).
