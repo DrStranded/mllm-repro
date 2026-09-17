@@ -54,6 +54,10 @@ def main():
     ap.add_argument("--gpu_mem", type=float, default=0.92)
     ap.add_argument("--max_model_len", type=int, default=24576)  # keep 16k of max_tokens a REAL budget
     ap.add_argument("--tp", type=int, default=1, help="tensor parallel size")
+    # Test-time ensemble support (additive; defaults reproduce the single-sample protocol exactly):
+    # --n K samples per prompt (T>0); sample 0 stays in `resp`, all K go to `resps` for ensemble_vote.py.
+    ap.add_argument("--n", type=int, default=1, help="samples per prompt (1 = frozen protocol)")
+    ap.add_argument("--seed", type=int, default=0, help="vLLM sampling seed")
     args = ap.parse_args()
 
     from PIL import Image
@@ -104,7 +108,7 @@ def main():
         print(f"[eval] cudagraph engine failed ({type(e).__name__}), falling back to eager", flush=True)
         llm = _build(True)
     sp = SamplingParams(temperature=args.temperature, top_p=args.top_p,
-                        max_tokens=args.max_tokens, seed=0)
+                        max_tokens=args.max_tokens, seed=args.seed, n=args.n)
 
     # Build vLLM inputs (prompt text via chat template + PIL via multi_modal_data).
     inputs, golds, questions = [], [], []
@@ -130,7 +134,10 @@ def main():
         ok = grade(pred, gold, q)
         n_extracted += pred is not None
         n_correct += ok
-        samples.append({"gold": gold, "pred": pred, "ok": ok, "resp": resp})
+        s = {"gold": gold, "pred": pred, "ok": ok, "resp": resp}
+        if args.n > 1:
+            s["resps"] = [c.text for c in o.outputs]
+        samples.append(s)
 
     n = len(rows)
     res = {"model": args.model, "data": args.data, "prompt": args.prompt,

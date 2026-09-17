@@ -92,7 +92,8 @@ def main():
         tok = AutoTokenizer.from_pretrained(args.judge)
         def _build(eager):
             return LLM(model=args.judge, dtype="bfloat16", tensor_parallel_size=args.tp,
-                       gpu_memory_utilization=0.92, max_model_len=8192, enforce_eager=eager)
+                       gpu_memory_utilization=float(os.environ.get("JUDGE_GPU_MEM", "0.92")),
+                       max_model_len=8192, enforce_eager=eager)
         try:
             llm = _build(False)
         except Exception:
